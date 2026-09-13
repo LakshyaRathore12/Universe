@@ -1,0 +1,6 @@
+{
+  "name": "UniVerse: University Event Management System",
+  "description": "University event management portal for students to discover workshops, seminars, and club events with scheduling, RSVP ticketing, and real-time email notifications.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
