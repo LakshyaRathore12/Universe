@@ -1,22 +1,90 @@
-import React from 'react';
-import { X, QrCode, Download, Mail, CheckCircle2, Calendar, MapPin, Printer } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, QrCode, Download, Mail, CheckCircle2, Calendar, MapPin, Printer, HardDrive, ExternalLink, Bell, Clock } from 'lucide-react';
 import { Registration, UniversityEvent } from '../types.js';
 import { downloadIcsFile } from '../utils/calendar.js';
+import { saveTicketPassToDrive } from '../lib/googleDrive.js';
 
 interface TicketPassModalProps {
   registration: Registration | null;
   event: UniversityEvent | null;
   onClose: () => void;
   onOpenMailbox: () => void;
+  accessToken?: string | null;
+  onOpenGoogleDrive?: () => void;
+  onReminderTriggered?: () => void;
 }
 
 export const TicketPassModal: React.FC<TicketPassModalProps> = ({
   registration,
   event,
   onClose,
-  onOpenMailbox
+  onOpenMailbox,
+  accessToken,
+  onOpenGoogleDrive,
+  onReminderTriggered
 }) => {
+  const [savingToDrive, setSavingToDrive] = useState(false);
+  const [driveSavedLink, setDriveSavedLink] = useState<string | null>(null);
+  const [driveError, setDriveError] = useState<string | null>(null);
+  const [triggeringReminder, setTriggeringReminder] = useState(false);
+  const [reminderMessage, setReminderMessage] = useState<string | null>(null);
+
   if (!registration || !event) return null;
+
+  const handleTriggerReminderNow = async () => {
+    setTriggeringReminder(true);
+    setReminderMessage(null);
+    try {
+      const res = await fetch(`/api/reminders/trigger-now/${registration.id}`, {
+        method: 'POST'
+      });
+      const data = await res.json();
+      if (data.success) {
+        setReminderMessage('⏰ 1-Hour reminder dispatched! Check your Campus Mailbox & Notifications.');
+        if (onReminderTriggered) onReminderTriggered();
+      } else {
+        setReminderMessage(data.message || 'Failed to dispatch reminder');
+      }
+    } catch (err: any) {
+      setReminderMessage('Error contacting reminder service');
+    } finally {
+      setTriggeringReminder(false);
+    }
+  };
+
+  const handleSaveToGoogleDrive = async () => {
+    if (!accessToken) {
+      if (onOpenGoogleDrive) onOpenGoogleDrive();
+      return;
+    }
+
+    setSavingToDrive(true);
+    setDriveError(null);
+    try {
+      const res = await saveTicketPassToDrive(
+        accessToken,
+        event.title,
+        registration.ticketCode,
+        registration.userName,
+        {
+          venue: event.venue,
+          dateTime: event.startDate,
+          studentId: registration.studentId,
+          department: registration.department
+        }
+      );
+
+      if (res.success && res.file?.webViewLink) {
+        setDriveSavedLink(res.file.webViewLink);
+      } else {
+        setDriveError(res.message || 'Could not save pass to Google Drive');
+      }
+    } catch (err: any) {
+      setDriveError(err.message || 'Failed to save to Drive');
+    } finally {
+      setSavingToDrive(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm animate-fadeIn">
@@ -138,6 +206,40 @@ export const TicketPassModal: React.FC<TicketPassModalProps> = ({
           {/* Action Buttons */}
           <div className="space-y-2 pt-2">
             <button
+              id="btn-save-pass-drive"
+              onClick={handleSaveToGoogleDrive}
+              disabled={savingToDrive}
+              className="w-full py-2.5 px-4 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95 disabled:opacity-60"
+            >
+              <HardDrive className={`w-4 h-4 ${savingToDrive ? 'animate-spin' : ''}`} />
+              <span>{savingToDrive ? 'Saving Pass to Google Drive...' : 'Save Pass to Google Drive'}</span>
+            </button>
+
+            {driveSavedLink && (
+              <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span className="truncate">Saved to your Google Drive!</span>
+                </div>
+                <a
+                  href={driveSavedLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] flex items-center gap-1 shrink-0"
+                >
+                  <span>Open</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            )}
+
+            {driveError && (
+              <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-[11px] text-rose-700">
+                {driveError}
+              </div>
+            )}
+
+            <button
               onClick={() => downloadIcsFile(event)}
               className="w-full py-2.5 px-4 text-xs font-semibold rounded-xl bg-slate-900 text-white hover:bg-slate-800 flex items-center justify-center gap-2 transition-colors"
             >
@@ -155,6 +257,46 @@ export const TicketPassModal: React.FC<TicketPassModalProps> = ({
               <Mail className="w-4 h-4" />
               <span>Open Delivered Ticket in Campus Mailbox</span>
             </button>
+
+            {/* 1-Hour Push & Email Reminder Control */}
+            <div className="p-3 rounded-xl bg-purple-50 border border-purple-200 text-xs">
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <div className="flex items-center gap-1.5 font-bold text-purple-900">
+                  <Clock className="w-4 h-4 text-purple-600" />
+                  <span>1-Hour Event Reminder System</span>
+                </div>
+                {registration.reminderSent ? (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                    ✅ Sent
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-200 text-purple-800">
+                    ⏰ Scheduled
+                  </span>
+                )}
+              </div>
+
+              <p className="text-[11px] text-purple-700 mb-2 leading-relaxed">
+                {registration.reminderSent
+                  ? `1-hour pre-event reminder was sent via Email & In-App Notification.`
+                  : `Automated trigger fires 1 hour before start time (${event.startTime}). You can also test-dispatch it now.`}
+              </p>
+
+              <button
+                onClick={handleTriggerReminderNow}
+                disabled={triggeringReminder}
+                className="w-full py-2 px-3 text-[11px] font-bold rounded-lg bg-purple-600 hover:bg-purple-500 text-white flex items-center justify-center gap-1.5 transition-colors shadow-sm disabled:opacity-60"
+              >
+                <Bell className={`w-3.5 h-3.5 ${triggeringReminder ? 'animate-bounce' : ''}`} />
+                <span>{triggeringReminder ? 'Triggering 1-Hour Reminder...' : registration.reminderSent ? 'Send Another 1-Hour Reminder' : 'Trigger 1-Hour Reminder Now'}</span>
+              </button>
+
+              {reminderMessage && (
+                <div className="mt-2 p-2 rounded-lg bg-white border border-purple-200 text-[11px] font-medium text-purple-900">
+                  {reminderMessage}
+                </div>
+              )}
+            </div>
           </div>
 
         </div>

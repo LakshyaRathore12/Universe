@@ -9,6 +9,7 @@ export const createClubRoutes = (clubsStore: Club[]) => {
   router.get('/', controller.getClubs);
   router.post('/', controller.createClub);
   router.get('/:id', controller.getClubById);
+  router.put('/:id/admins', controller.updateClubAdmins);
 
   return router;
 };

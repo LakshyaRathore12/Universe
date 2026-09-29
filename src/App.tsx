@@ -15,17 +15,20 @@ import {
   Zap,
   CheckCircle2,
   SlidersHorizontal,
-  ChevronDown
+  ChevronDown,
+  LayoutGrid
 } from 'lucide-react';
 import { 
   Club, 
+  ClubAdminInfo,
   EmailNotification, 
   EventCategory, 
   InAppNotification, 
   Registration, 
   UniversityEvent, 
   UniversityVenue, 
-  User 
+  User,
+  UserRole
 } from './types.js';
 import { INITIAL_USERS } from './data/mockInitialData.js';
 import { Navbar } from './components/Navbar.js';
@@ -38,18 +41,46 @@ import { BroadcastModal } from './components/BroadcastModal.js';
 import { CalendarView } from './components/CalendarView.js';
 import { ClubsView } from './components/ClubsView.js';
 import { ClubRegisterModal } from './components/ClubRegisterModal.js';
+import { ClubAdminsModal } from './components/ClubAdminsModal.js';
+import { ClubParticipantsModal } from './components/ClubParticipantsModal.js';
 import { MyPassesView } from './components/MyPassesView.js';
 import { OrganizerDashboard } from './components/OrganizerDashboard.js';
+import { AdminRegistrationsView } from './components/AdminRegistrationsView.js';
 import { MailboxModal } from './components/MailboxModal.js';
 import { NotificationToast } from './components/NotificationToast.js';
+import { ReminderToast, ReminderAlertData } from './components/ReminderToast.js';
+import { GoogleDriveModal } from './components/GoogleDriveModal.js';
+import { auth, getAccessToken } from './lib/firebase.js';
 
 export default function App() {
   // Current Authenticated User (Defaults to student Aarav Sharma)
   const [currentUser, setCurrentUser] = useState<User | null>(INITIAL_USERS[0]);
   const [availableUsers, setAvailableUsers] = useState<User[]>(INITIAL_USERS);
 
-  // Active View Tab
-  const [currentTab, setCurrentTab] = useState<'events' | 'calendar' | 'clubs' | 'passes' | 'organizer'>('events');
+  // Active View Tab (Schedule and Calendar are accessed directly on the dashboard)
+  const [currentTab, setCurrentTab] = useState<'events' | 'clubs' | 'passes' | 'organizer' | 'admin'>('events');
+  const [dashboardViewMode, setDashboardViewMode] = useState<'cards' | 'calendar'>('cards');
+
+  // Dark Mode / Light Mode Theme State
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem('mits_theme');
+    if (saved === 'dark' || saved === 'light') return saved;
+    return 'light';
+  });
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('mits_theme', theme);
+  }, [theme]);
+
+  // Google Drive & Firebase OAuth State
+  const [googleDriveToken, setGoogleDriveToken] = useState<string | null>(getAccessToken());
+  const [googleDriveModalOpen, setGoogleDriveModalOpen] = useState(false);
+  const [googleDriveUserEmail, setGoogleDriveUserEmail] = useState<string | undefined>(undefined);
 
   // Core Data Stores
   const [events, setEvents] = useState<UniversityEvent[]>([]);
@@ -74,8 +105,13 @@ export default function App() {
   const [broadcastModalEvent, setBroadcastModalEvent] = useState<UniversityEvent | null>(null);
   const [ticketModalData, setTicketModalData] = useState<{ reg: Registration; evt: UniversityEvent } | null>(null);
   const [clubRegisterModalOpen, setClubRegisterModalOpen] = useState(false);
+  const [selectedClubForAdmins, setSelectedClubForAdmins] = useState<Club | null>(null);
+  const [clubAdminsModalOpen, setClubAdminsModalOpen] = useState(false);
+  const [selectedClubForParticipants, setSelectedClubForParticipants] = useState<Club | null>(null);
+  const [clubParticipantsModalOpen, setClubParticipantsModalOpen] = useState(false);
   const [mailboxModalOpen, setMailboxModalOpen] = useState(false);
   const [toastEmail, setToastEmail] = useState<EmailNotification | null>(null);
+  const [reminderAlert, setReminderAlert] = useState<ReminderAlertData | null>(null);
 
   // Load Initial API Data
   const loadData = useCallback(async () => {
@@ -94,7 +130,17 @@ export default function App() {
         usersRes.json()
       ]);
 
-      if (eventsData.success) setEvents(eventsData.events);
+      if (eventsData.success && Array.isArray(eventsData.events)) {
+        const uniqueEvents: UniversityEvent[] = [];
+        const seenEvtIds = new Set<string>();
+        for (const ev of eventsData.events) {
+          if (!seenEvtIds.has(ev.id)) {
+            seenEvtIds.add(ev.id);
+            uniqueEvents.push(ev);
+          }
+        }
+        setEvents(uniqueEvents);
+      }
       if (clubsData.success) setClubs(clubsData.clubs);
       if (venuesData.success) setVenues(venuesData.venues);
       if (usersData.success) setAvailableUsers(usersData.users);
@@ -121,7 +167,17 @@ export default function App() {
         notifsRes.json()
       ]);
 
-      if (regsData.success) setMyRegistrations(regsData.registrations);
+      if (regsData.success && Array.isArray(regsData.registrations)) {
+        const uniqueRegs: Registration[] = [];
+        const seenRegIds = new Set<string>();
+        for (const reg of regsData.registrations) {
+          if (!seenRegIds.has(reg.id)) {
+            seenRegIds.add(reg.id);
+            uniqueRegs.push(reg);
+          }
+        }
+        setMyRegistrations(uniqueRegs);
+      }
       if (emailsData.success) setEmails(emailsData.emails);
       if (notifsData.success) setNotifications(notifsData.notifications);
     } catch (err) {
@@ -136,6 +192,21 @@ export default function App() {
   useEffect(() => {
     loadUserData();
   }, [currentUser, loadUserData]);
+
+  // Firebase Auth listener for Google Drive Token & Identity
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(user => {
+      if (user) {
+        setGoogleDriveUserEmail(user.email || undefined);
+        const token = getAccessToken();
+        if (token) setGoogleDriveToken(token);
+      } else {
+        setGoogleDriveToken(null);
+        setGoogleDriveUserEmail(undefined);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Real-Time Server-Sent Events (SSE) Listener
   useEffect(() => {
@@ -169,7 +240,14 @@ export default function App() {
     eventSource.addEventListener('event_created', (e: MessageEvent) => {
       try {
         const payload = JSON.parse(e.data);
-        setEvents(prev => [payload.event, ...prev]);
+        if (payload?.event) {
+          setEvents(prev => {
+            if (prev.some(ev => ev.id === payload.event.id)) {
+              return prev.map(ev => ev.id === payload.event.id ? payload.event : ev);
+            }
+            return [payload.event, ...prev];
+          });
+        }
       } catch (err) {
         console.error(err);
       }
@@ -191,6 +269,37 @@ export default function App() {
         setEvents(prev => prev.map(ev => ev.id === payload.eventId ? { ...ev, registeredCount: payload.registeredCount } : ev));
       } catch (err) {
         console.error(err);
+      }
+    });
+
+    eventSource.addEventListener('reminder_triggered', (e: MessageEvent) => {
+      try {
+        const payload = JSON.parse(e.data);
+        loadUserData();
+
+        if (currentUser && (payload.userEmail.toLowerCase() === currentUser.email.toLowerCase() || payload.userId === currentUser.id)) {
+          setReminderAlert({
+            eventTitle: payload.eventTitle,
+            startTime: payload.startTime,
+            venue: payload.venue,
+            ticketCode: payload.ticketCode,
+            minutesLeft: payload.minutesLeft || 60,
+            eventId: payload.eventId
+          });
+
+          if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+            try {
+              new Notification(`⏰ 1-Hour Reminder: ${payload.eventTitle}`, {
+                body: `Starts at ${payload.startTime} in ${payload.venue}. Ticket Pass: ${payload.ticketCode}`,
+                icon: '/favicon.ico'
+              });
+            } catch (notifErr) {
+              console.warn('Native notification failed:', notifErr);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error handling SSE reminder_triggered', err);
       }
     });
 
@@ -290,7 +399,12 @@ export default function App() {
       });
       const data = await res.json();
       if (data.success) {
-        setEvents(prev => [data.event, ...prev]);
+        setEvents(prev => {
+          if (prev.some(e => e.id === data.event.id)) {
+            return prev.map(e => e.id === data.event.id ? data.event : e);
+          }
+          return [data.event, ...prev];
+        });
       }
     }
   };
@@ -317,8 +431,63 @@ export default function App() {
       body: JSON.stringify(clubData)
     });
     const data = await res.json();
-    if (data.success) {
+    if (data.success && data.club) {
       setClubs(prev => [data.club, ...prev]);
+      try {
+        const userRes = await fetch('/api/auth/users');
+        const userData = await userRes.json();
+        if (userData.success) setAvailableUsers(userData.users);
+      } catch {}
+    }
+  };
+
+  // Update Club Admins (Editable by other admins present)
+  const handleUpdateClubAdmins = async (clubId: string, updatedAdmins: ClubAdminInfo[]) => {
+    try {
+      const res = await fetch(`/api/clubs/${clubId}/admins`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          admins: updatedAdmins,
+          updatedBy: currentUser ? `${currentUser.name} (${currentUser.role})` : 'Club Administrator'
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.club) {
+        setClubs(prev => prev.map(c => c.id === clubId ? data.club : c));
+        if (selectedClubForAdmins?.id === clubId) {
+          setSelectedClubForAdmins(data.club);
+        }
+        // Refresh users in case new admins were created
+        try {
+          const userRes = await fetch('/api/auth/users');
+          const userData = await userRes.json();
+          if (userData.success) setAvailableUsers(userData.users);
+        } catch {}
+      } else {
+        throw new Error(data.message || 'Failed to update club administrators');
+      }
+    } catch (err: any) {
+      // Fallback local update
+      setClubs(prev => prev.map(c => {
+        if (c.id === clubId) {
+          const primary = updatedAdmins[0];
+          const updatedClub = {
+            ...c,
+            admins: updatedAdmins,
+            leadName: primary ? primary.name : c.leadName,
+            leadEmail: primary ? primary.email : c.leadEmail,
+            leadPhone: primary ? primary.phone : c.leadPhone,
+            leadEnrollmentNo: primary ? primary.enrollmentNo : c.leadEnrollmentNo,
+            leadYear: primary ? primary.year : c.leadYear,
+          };
+          if (selectedClubForAdmins?.id === clubId) {
+            setSelectedClubForAdmins(updatedClub);
+          }
+          return updatedClub;
+        }
+        return c;
+      }));
     }
   };
 
@@ -339,8 +508,25 @@ export default function App() {
 
   const unreadEmailCount = emails.filter(m => currentUser && m.recipientEmail.toLowerCase() === currentUser.email.toLowerCase() && !m.read).length;
 
+  // Handle User Logout
+  const handleLogout = async () => {
+    try {
+      await auth.signOut();
+    } catch (err) {
+      console.error('Error signing out:', err);
+    }
+    setCurrentUser(null);
+    setMyRegistrations([]);
+    setNotifications([]);
+    setGoogleDriveToken(null);
+    setGoogleDriveUserEmail(undefined);
+    if (currentTab === 'passes') {
+      setCurrentTab('events');
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col selection:bg-indigo-100 selection:text-indigo-900">
+    <div className={`min-h-screen ${theme === 'dark' ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'} flex flex-col selection:bg-indigo-100 selection:text-indigo-900 transition-colors duration-200`}>
       
       {/* Top Navbar */}
       <Navbar
@@ -353,11 +539,14 @@ export default function App() {
           setEditingEvent(null);
           setScheduleModalOpen(true);
         }}
-        onSwitchUser={(user) => setCurrentUser(user)}
-        availableUsers={availableUsers}
+        onLogout={handleLogout}
         unreadEmailCount={unreadEmailCount}
         notifications={notifications}
         myPassesCount={myRegistrations.length}
+        onOpenGoogleDrive={() => setGoogleDriveModalOpen(true)}
+        isGoogleDriveConnected={!!googleDriveToken}
+        theme={theme}
+        onToggleTheme={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
         onMarkNotificationsRead={() => {
           fetch('/api/notifications/mark-read', {
             method: 'POST',
@@ -369,7 +558,7 @@ export default function App() {
       />
 
       {/* Main App Content Viewport */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-24 md:pb-8">
         
         {/* TAB 1: EXPLORE EVENTS & WORKSHOPS */}
         {currentTab === 'events' && (
@@ -396,19 +585,11 @@ export default function App() {
                 {/* Quick Action Buttons */}
                 <div className="mt-6 flex flex-wrap items-center gap-3">
                   <button
-                    onClick={() => setCurrentTab('calendar')}
-                    className="px-4 py-2.5 rounded-xl bg-white text-slate-900 text-xs font-bold hover:bg-slate-100 transition-all flex items-center gap-2 shadow-sm"
-                  >
-                    <CalendarIcon className="w-4 h-4 text-indigo-600" />
-                    <span>View Campus Schedule</span>
-                  </button>
-
-                  <button
                     onClick={() => {
                       setEditingEvent(null);
                       setScheduleModalOpen(true);
                     }}
-                    className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all flex items-center gap-2 shadow-sm shadow-indigo-600/30"
+                    className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all flex items-center gap-2 shadow-sm shadow-indigo-600/30 cursor-pointer"
                   >
                     <PlusCircle className="w-4 h-4" />
                     <span>Host Club Event</span>
@@ -416,7 +597,7 @@ export default function App() {
 
                   <button
                     onClick={() => setMailboxModalOpen(true)}
-                    className="px-4 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-800 text-slate-200 text-xs font-semibold transition-colors flex items-center gap-2 border border-slate-700/60"
+                    className="px-4 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-800 text-slate-200 text-xs font-semibold transition-colors flex items-center gap-2 border border-slate-700/60 cursor-pointer"
                   >
                     <Mail className="w-4 h-4 text-indigo-400" />
                     <span>Campus Mailbox</span>
@@ -490,55 +671,91 @@ export default function App() {
               </div>
             </div>
 
-            {/* Events Grid */}
+            {/* Events Grid & Schedule/Calendar Dashboard View */}
             <div>
-              <div className="flex items-center justify-between mb-4 px-1">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Showing {filteredEvents.length} Campus Events
-                </span>
-              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 px-1">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    {dashboardViewMode === 'calendar' 
+                      ? 'Campus Master Schedule & Calendar' 
+                      : `Showing ${filteredEvents.length} Campus Events`}
+                  </span>
+                  {dashboardViewMode === 'calendar' && (
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Interactive monthly schedule of university workshops, academic seminars, and club venues
+                    </p>
+                  )}
+                </div>
 
-              {filteredEvents.length === 0 ? (
-                <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm">
-                  <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
-                    <Search className="w-6 h-6" />
-                  </div>
-                  <h3 className="font-heading font-bold text-base text-slate-800">No matching events found</h3>
-                  <p className="text-xs text-slate-500 mt-1">Try clearing filters or search terms</p>
+                {/* Dashboard View Mode Toggle */}
+                <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-0.5 shadow-2xs self-start sm:self-auto">
                   <button
-                    onClick={() => { setSearchQuery(''); setSelectedCategory('All'); setSelectedClubId('all'); }}
-                    className="mt-4 px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold"
+                    id="btn-dashboard-view-cards"
+                    onClick={() => setDashboardViewMode('cards')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      dashboardViewMode === 'cards'
+                        ? 'bg-indigo-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                    }`}
                   >
-                    Reset All Filters
+                    <LayoutGrid className="w-3.5 h-3.5" />
+                    <span>Events Grid</span>
+                  </button>
+                  <button
+                    id="btn-dashboard-view-calendar"
+                    onClick={() => setDashboardViewMode('calendar')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      dashboardViewMode === 'calendar'
+                        ? 'bg-indigo-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                    }`}
+                  >
+                    <CalendarIcon className="w-3.5 h-3.5" />
+                    <span>Schedule & Calendar</span>
                   </button>
                 </div>
+              </div>
+
+              {dashboardViewMode === 'calendar' ? (
+                <CalendarView
+                  events={filteredEvents.length > 0 ? filteredEvents : events}
+                  onSelectEvent={(evt) => setDetailModalEvent(evt)}
+                />
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredEvents.map(evt => {
-                    const isRegistered = myRegistrations.some(r => r.eventId === evt.id && r.status === 'confirmed');
-                    return (
-                      <EventCard
-                        key={evt.id}
-                        event={evt}
-                        isRegistered={isRegistered}
-                        onViewDetails={(e) => setDetailModalEvent(e)}
-                        onRegister={(e) => handleRegisterEvent(e)}
-                      />
-                    );
-                  })}
-                </div>
+                filteredEvents.length === 0 ? (
+                  <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm">
+                    <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                      <Search className="w-6 h-6" />
+                    </div>
+                    <h3 className="font-heading font-bold text-base text-slate-800">No matching events found</h3>
+                    <p className="text-xs text-slate-500 mt-1">Try clearing filters or search terms</p>
+                    <button
+                      onClick={() => { setSearchQuery(''); setSelectedCategory('All'); setSelectedClubId('all'); }}
+                      className="mt-4 px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold"
+                    >
+                      Reset All Filters
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredEvents.map(evt => {
+                      const isRegistered = myRegistrations.some(r => r.eventId === evt.id && r.status === 'confirmed');
+                      return (
+                        <EventCard
+                          key={evt.id}
+                          event={evt}
+                          isRegistered={isRegistered}
+                          onViewDetails={(e) => setDetailModalEvent(e)}
+                          onRegister={(e) => handleRegisterEvent(e)}
+                        />
+                      );
+                    })}
+                  </div>
+                )
               )}
             </div>
 
           </div>
-        )}
-
-        {/* TAB 2: SCHEDULE & CALENDAR */}
-        {currentTab === 'calendar' && (
-          <CalendarView
-            events={events}
-            onSelectEvent={(evt) => setDetailModalEvent(evt)}
-          />
         )}
 
         {/* TAB 3: CLUBS DIRECTORY */}
@@ -546,6 +763,7 @@ export default function App() {
           <ClubsView
             clubs={clubs}
             events={events}
+            currentUser={currentUser}
             onSelectClubFilter={(clubId) => {
               setSelectedClubId(clubId);
               setCurrentTab('events');
@@ -554,6 +772,14 @@ export default function App() {
             onScheduleEventForClub={(clubId) => {
               setEditingEvent(null);
               setScheduleModalOpen(true);
+            }}
+            onManageAdmins={(club) => {
+              setSelectedClubForAdmins(club);
+              setClubAdminsModalOpen(true);
+            }}
+            onViewParticipants={(club) => {
+              setSelectedClubForParticipants(club);
+              setClubParticipantsModalOpen(true);
             }}
           />
         )}
@@ -566,6 +792,10 @@ export default function App() {
             onOpenMailbox={() => setMailboxModalOpen(true)}
             onCancelRegistration={handleCancelRegistration}
             onExploreEvents={() => setCurrentTab('events')}
+            onRefreshData={loadUserData}
+            currentUser={currentUser}
+            accessToken={googleDriveToken}
+            onOpenGoogleDrive={() => setGoogleDriveModalOpen(true)}
           />
         )}
 
@@ -574,6 +804,9 @@ export default function App() {
           <OrganizerDashboard
             events={events}
             currentUser={currentUser}
+            clubs={clubs}
+            accessToken={googleDriveToken}
+            onOpenGoogleDrive={() => setGoogleDriveModalOpen(true)}
             onOpenScheduleEvent={() => {
               setEditingEvent(null);
               setScheduleModalOpen(true);
@@ -585,30 +818,64 @@ export default function App() {
             onOpenBroadcast={(evt) => setBroadcastModalEvent(evt)}
             onCancelEvent={handleCancelEvent}
             onOpenMailbox={() => setMailboxModalOpen(true)}
+            onNavigateToAdmin={() => setCurrentTab('admin')}
+            onManageClubAdmins={(club) => {
+              setSelectedClubForAdmins(club);
+              setClubAdminsModalOpen(true);
+            }}
+            onRefreshData={loadData}
+          />
+        )}
+
+        {/* TAB 6: CLUB ADMIN CANDIDATES DIRECTORY */}
+        {currentTab === 'admin' && (
+          <AdminRegistrationsView
+            currentUser={currentUser}
+            events={events}
+            clubs={clubs}
+            accessToken={googleDriveToken}
+            onOpenGoogleDrive={() => setGoogleDriveModalOpen(true)}
+            onOpenScheduleEvent={() => {
+              setEditingEvent(null);
+              setScheduleModalOpen(true);
+            }}
+            onOpenMailbox={() => setMailboxModalOpen(true)}
+            onSwitchUser={(user) => {
+              setCurrentUser(user);
+              loadUserData();
+            }}
+            availableUsers={availableUsers}
+            onManageClubAdmins={(club) => {
+              setSelectedClubForAdmins(club);
+              setClubAdminsModalOpen(true);
+            }}
           />
         )}
 
       </main>
 
       {/* FOOTER */}
-      <footer className="bg-white border-t border-slate-200 mt-12 py-8 text-xs text-slate-500">
+      <footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 mt-12 py-8 text-xs text-slate-500 dark:text-slate-400">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-xs">
-              U
+          <div className="flex flex-col sm:flex-row items-center gap-2">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-xs">
+                U
+              </div>
+              <span className="font-heading font-extrabold text-slate-900 dark:text-white text-sm">Universe</span>
             </div>
-            <span className="font-heading font-bold text-slate-800 text-sm">UniVerse</span>
-            <span>• Central University Event & Workshop Management System</span>
+            <span className="hidden sm:inline text-slate-300 dark:text-slate-600">•</span>
+            <span className="text-slate-600 dark:text-slate-300 font-medium">Madhav institute of technology and science Gwalior (Estd. 1957)</span>
           </div>
 
-          <div className="flex items-center gap-4 text-[11px] text-slate-500">
+          <div className="flex items-center gap-4 text-[11px] text-slate-500 dark:text-slate-400">
             <span>Dean of Student Affairs</span>
             <span>•</span>
             <span>Academic Council</span>
             <span>•</span>
             <button 
               onClick={() => setMailboxModalOpen(true)}
-              className="text-indigo-600 hover:text-indigo-800 font-semibold"
+              className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-semibold"
             >
               Simulated Mailbox ({emails.length} dispatches)
             </button>
@@ -672,7 +939,10 @@ export default function App() {
       <TicketPassModal
         registration={ticketModalData?.reg || null}
         event={ticketModalData?.evt || null}
+        accessToken={googleDriveToken}
+        onOpenGoogleDrive={() => setGoogleDriveModalOpen(true)}
         onClose={() => setTicketModalData(null)}
+        onReminderTriggered={() => loadUserData()}
         onOpenMailbox={() => {
           setTicketModalData(null);
           setMailboxModalOpen(true);
@@ -684,6 +954,34 @@ export default function App() {
         onClose={() => setClubRegisterModalOpen(false)}
         onRegisterClub={handleRegisterClub}
       />
+
+      <ClubAdminsModal
+        isOpen={clubAdminsModalOpen}
+        onClose={() => {
+          setClubAdminsModalOpen(false);
+          setSelectedClubForAdmins(null);
+        }}
+        club={selectedClubForAdmins}
+        currentUser={currentUser}
+        onUpdateAdmins={handleUpdateClubAdmins}
+      />
+
+      {selectedClubForParticipants && (
+        <ClubParticipantsModal
+          isOpen={clubParticipantsModalOpen}
+          onClose={() => {
+            setClubParticipantsModalOpen(false);
+            setSelectedClubForParticipants(null);
+          }}
+          club={selectedClubForParticipants}
+          currentUser={currentUser}
+          onUpdateClub={(updatedClub) => {
+            setClubs(prev => prev.map(c => c.id === updatedClub.id ? updatedClub : c));
+            setSelectedClubForParticipants(updatedClub);
+          }}
+          onRefreshClubs={loadData}
+        />
+      )}
 
       <MailboxModal
         isOpen={mailboxModalOpen}
@@ -699,6 +997,37 @@ export default function App() {
         onOpenMailbox={() => {
           setToastEmail(null);
           setMailboxModalOpen(true);
+        }}
+      />
+
+      <ReminderToast
+        alert={reminderAlert}
+        onClose={() => setReminderAlert(null)}
+        onOpenTicket={() => {
+          if (!reminderAlert) return;
+          const reg = myRegistrations.find(r => r.eventId === reminderAlert.eventId);
+          const evt = events.find(e => e.id === reminderAlert.eventId);
+          if (reg && evt) {
+            setTicketModalData({ reg, evt });
+          } else {
+            setCurrentTab('passes');
+          }
+          setReminderAlert(null);
+        }}
+        onOpenMailbox={() => {
+          setReminderAlert(null);
+          setMailboxModalOpen(true);
+        }}
+      />
+
+      <GoogleDriveModal
+        isOpen={googleDriveModalOpen}
+        onClose={() => setGoogleDriveModalOpen(false)}
+        accessToken={googleDriveToken}
+        currentUserEmail={googleDriveUserEmail}
+        onTokenUpdated={(token, email) => {
+          setGoogleDriveToken(token);
+          if (email) setGoogleDriveUserEmail(email);
         }}
       />
 

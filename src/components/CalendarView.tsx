@@ -112,20 +112,21 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       </div>
 
       {/* Monthly Grid */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        {/* Day Headers */}
-        <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center text-[11px] font-bold uppercase tracking-wider text-slate-500 py-3">
-          <span>Sun</span>
-          <span>Mon</span>
-          <span>Tue</span>
-          <span>Wed</span>
-          <span>Thu</span>
-          <span>Fri</span>
-          <span>Sat</span>
-        </div>
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-x-auto">
+        <div className="min-w-[620px] sm:min-w-full">
+          {/* Day Headers */}
+          <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center text-[11px] font-bold uppercase tracking-wider text-slate-500 py-3">
+            <span>Sun</span>
+            <span>Mon</span>
+            <span>Tue</span>
+            <span>Wed</span>
+            <span>Thu</span>
+            <span>Fri</span>
+            <span>Sat</span>
+          </div>
 
-        {/* Days Matrix */}
-        <div className="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-slate-100">
+          {/* Days Matrix */}
+          <div className="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-slate-100">
           {blankDays.map((_, i) => (
             <div key={`blank-${i}`} className="min-h-28 sm:min-h-32 bg-slate-50/50 p-2" />
           ))}
@@ -159,9 +160,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
                 {/* Event Chips for this day */}
                 <div className="space-y-1">
-                  {dayEvents.slice(0, 3).map(evt => (
+                  {dayEvents.slice(0, 3).map((evt, eIdx) => (
                     <div
-                      key={evt.id}
+                      key={evt.id ? `${evt.id}-${eIdx}` : `evt-${eIdx}`}
                       onClick={() => onSelectEvent(evt)}
                       className={`p-1 sm:p-1.5 rounded-lg text-[10px] sm:text-[11px] font-semibold cursor-pointer truncate transition-all ${
                         evt.category === 'Workshop'
@@ -190,6 +191,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           })}
         </div>
       </div>
+    </div>
 
       {/* Chronological List of Upcoming Events */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
@@ -199,9 +201,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         </h3>
 
         <div className="divide-y divide-slate-100">
-          {filteredEvents.map(evt => (
+          {filteredEvents.map((evt, fIdx) => (
             <div 
-              key={evt.id}
+              key={evt.id ? `${evt.id}-${fIdx}` : `fevt-${fIdx}`}
               onClick={() => onSelectEvent(evt)}
               className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/80 rounded-xl px-2.5 transition-colors cursor-pointer"
             >

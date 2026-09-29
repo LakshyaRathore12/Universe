@@ -8,7 +8,8 @@ import {
   ChevronRight, 
   CheckCircle,
   Download,
-  Share2
+  Share2,
+  GraduationCap
 } from 'lucide-react';
 import { UniversityEvent } from '../types.js';
 import { downloadIcsFile } from '../utils/calendar.js';
@@ -132,6 +133,13 @@ export const EventCard: React.FC<EventCardProps> = ({
               <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
               <span className="truncate">{event.venue}</span>
             </div>
+
+            {event.facultyCoordinator && (
+              <div className="flex items-center gap-1.5 text-[11px] text-amber-900 bg-amber-50/70 border border-amber-200/60 px-2 py-0.5 rounded-md">
+                <GraduationCap className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                <span className="truncate font-medium">Coord: {event.facultyCoordinator}</span>
+              </div>
+            )}
           </div>
 
           {/* Seat Capacity Progress */}

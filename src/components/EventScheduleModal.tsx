@@ -10,9 +10,19 @@ import {
   Award, 
   Image as ImageIcon,
   Sparkles,
-  AlertTriangle
+  AlertTriangle,
+  GraduationCap,
+  BookOpen,
+  ShieldCheck,
+  Lock
 } from 'lucide-react';
 import { Club, UniversityEvent, UniversityVenue, User } from '../types.js';
+import { 
+  isMasterUser, 
+  getAllowedClubsForUser, 
+  canUserOrganizeEventsForClub, 
+  isUserAssignedLeaderForClub 
+} from '../lib/permissions.js';
 
 interface EventScheduleModalProps {
   isOpen: boolean;
@@ -44,11 +54,16 @@ export const EventScheduleModal: React.FC<EventScheduleModalProps> = ({
   const [endTime, setEndTime] = useState('16:00');
   const [venue, setVenue] = useState('');
   const [venueId, setVenueId] = useState('');
+  const [venueMode, setVenueMode] = useState<'preset' | 'custom'>('preset');
   const [capacity, setCapacity] = useState(80);
   const [certificatesProvided, setCertificatesProvided] = useState(true);
+  const [facultyCoordinator, setFacultyCoordinator] = useState('');
+  const [facultyCoordinatorEmail, setFacultyCoordinatorEmail] = useState('');
+  const [facultyCoordinatorDept, setFacultyCoordinatorDept] = useState('');
   const [coverImage, setCoverImage] = useState('');
   const [rescheduleReason, setRescheduleReason] = useState('');
   const [loading, setLoading] = useState(false);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
 
   // Agenda items
   const [agenda, setAgenda] = useState<{ id: string; time: string; title: string; speaker?: string }[]>([
@@ -61,8 +76,18 @@ export const EventScheduleModal: React.FC<EventScheduleModalProps> = ({
     { name: '', role: '', companyOrCollege: '', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80' }
   ]);
 
+  const isMaster = isMasterUser(currentUser);
+  const isFaculty = isMaster || currentUser?.role === 'faculty' || currentUser?.role === 'admin' || currentUser?.role === 'master_admin';
+  const allowedClubs = getAllowedClubsForUser(currentUser, clubs);
+
   useEffect(() => {
+    setPermissionError(null);
     if (editingEvent) {
+      const targetClub = clubs.find(c => c.id === editingEvent.clubId);
+      if (!isFaculty && !isUserAssignedLeaderForClub(currentUser, targetClub)) {
+        setPermissionError(`Access Denied: You are not authorized to modify events for "${editingEvent.clubName}". Club leaders can only modify events of the club where faculty assigned their email as President or Vice President.`);
+      }
+
       setTitle(editingEvent.title);
       setTagline(editingEvent.tagline);
       setDescription(editingEvent.description);
@@ -74,8 +99,13 @@ export const EventScheduleModal: React.FC<EventScheduleModalProps> = ({
       setEndTime(editingEvent.endTime);
       setVenue(editingEvent.venue);
       setVenueId(editingEvent.venueId || '');
+      const isCustom = editingEvent.venueId === 'custom' || !venues.some(v => v.id === editingEvent.venueId);
+      setVenueMode(isCustom ? 'custom' : 'preset');
       setCapacity(editingEvent.capacity);
       setCertificatesProvided(editingEvent.certificatesProvided);
+      setFacultyCoordinator(editingEvent.facultyCoordinator || '');
+      setFacultyCoordinatorEmail(editingEvent.facultyCoordinatorEmail || '');
+      setFacultyCoordinatorDept(editingEvent.facultyCoordinatorDept || '');
       setCoverImage(editingEvent.coverImage);
       setAgenda(editingEvent.agenda || []);
       setSpeakers(editingEvent.speakers || []);
@@ -85,12 +115,14 @@ export const EventScheduleModal: React.FC<EventScheduleModalProps> = ({
       setTitle('');
       setTagline('');
       setDescription('');
-      // Preselect current user's club if available
-      const defaultClub = currentUser?.clubId 
-        ? clubs.find(c => c.id === currentUser.clubId) || clubs[0]
-        : clubs[0];
+      
+      // Default to user's assigned club
+      const defaultClub = allowedClubs.length > 0 ? allowedClubs[0] : clubs[0];
       setClubId(defaultClub?.id || '');
       setCategory('Workshop');
+      setFacultyCoordinator(defaultClub?.facultyAdvisor || 'Prof. Radhika Iyer');
+      setFacultyCoordinatorEmail(defaultClub?.facultyAdvisorEmail || 'radhika.iyer@mitsgwalior.in');
+      setFacultyCoordinatorDept('Department of Computer Science & Engineering');
       
       const tomorrow = new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0];
       setStartDate(tomorrow);
@@ -98,10 +130,15 @@ export const EventScheduleModal: React.FC<EventScheduleModalProps> = ({
       setStartTime('10:00');
       setEndTime('16:00');
       
+      setVenueMode('preset');
       if (venues[0]) {
         setVenue(venues[0].name);
         setVenueId(venues[0].id);
         setCapacity(venues[0].capacity);
+      } else {
+        setVenue('Main Block Auditorium');
+        setVenueId('custom');
+        setCapacity(150);
       }
       setCoverImage('https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1000&auto=format&fit=crop&q=80');
       setCertificatesProvided(true);
@@ -149,6 +186,12 @@ export const EventScheduleModal: React.FC<EventScheduleModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const chosenClub = clubs.find(c => c.id === clubId);
+    if (!isFaculty && !isUserAssignedLeaderForClub(currentUser, chosenClub)) {
+      setPermissionError(`Access Denied: You do not have permissions to organize events for "${chosenClub?.name || 'this club'}". You can only organize events for the club where faculty assigned your email for President or Vice President position.`);
+      return;
+    }
+
     setLoading(true);
     try {
       const payload: Partial<UniversityEvent> = {
@@ -166,6 +209,9 @@ export const EventScheduleModal: React.FC<EventScheduleModalProps> = ({
         capacity: Number(capacity),
         coverImage,
         certificatesProvided,
+        facultyCoordinator: facultyCoordinator.trim() || undefined,
+        facultyCoordinatorEmail: facultyCoordinatorEmail.trim() || undefined,
+        facultyCoordinatorDept: facultyCoordinatorDept.trim() || undefined,
         agenda: agenda.filter(a => a.title.trim() !== ''),
         speakers: speakers.filter(s => s.name.trim() !== '')
       };
@@ -230,6 +276,16 @@ export const EventScheduleModal: React.FC<EventScheduleModalProps> = ({
             </div>
           )}
 
+          {permissionError && (
+            <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 flex items-start gap-2">
+              <Lock className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <div>
+                <strong className="block font-bold text-xs text-rose-950">Permission Restriction</strong>
+                <p className="text-[11px] leading-relaxed text-rose-800">{permissionError}</p>
+              </div>
+            </div>
+          )}
+
           {/* Section 1: Basic Info */}
           <div className="space-y-3">
             <h3 className="font-bold text-slate-900 uppercase tracking-wider text-[11px] border-b pb-1">
@@ -273,15 +329,28 @@ export const EventScheduleModal: React.FC<EventScheduleModalProps> = ({
                 <select
                   value={clubId}
                   onChange={e => setClubId(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 bg-white"
+                  disabled={!isFaculty && allowedClubs.length <= 1}
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 bg-white disabled:bg-slate-100 disabled:text-slate-600"
                   required
                 >
-                  {clubs.map(c => (
+                  {(isFaculty ? clubs : allowedClubs).map(c => (
                     <option key={c.id} value={c.id}>
                       {c.name} ({c.category})
                     </option>
                   ))}
                 </select>
+                {!isFaculty && allowedClubs.length > 0 && (
+                  <p className="text-[10px] text-indigo-700 font-semibold mt-1 flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3 text-indigo-600 shrink-0" />
+                    <span>Scoped to your faculty-assigned society (President / VP clearance).</span>
+                  </p>
+                )}
+                {!isFaculty && allowedClubs.length === 0 && (
+                  <p className="text-[10px] text-rose-600 font-semibold mt-1 flex items-center gap-1">
+                    <Lock className="w-3 h-3 text-rose-500 shrink-0" />
+                    <span>Not assigned as President or Vice President of any society.</span>
+                  </p>
+                )}
               </div>
 
               <div>
@@ -306,6 +375,76 @@ export const EventScheduleModal: React.FC<EventScheduleModalProps> = ({
                 className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300"
                 required
               />
+            </div>
+
+            {/* Faculty Coordinator / Academic Oversight */}
+            <div className="p-3.5 rounded-xl bg-amber-50/80 border border-amber-200 space-y-2.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <label className="font-bold text-slate-900 flex items-center gap-1.5 text-xs">
+                  <GraduationCap className="w-4 h-4 text-amber-600" />
+                  <span>Faculty Coordinator / Academic Advisor *</span>
+                </label>
+                <span className="text-[10px] text-amber-900 font-semibold px-2 py-0.5 rounded-full bg-amber-100/90 border border-amber-200">
+                  Required for Academic Oversight & Certificate Verification
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Coordinator Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={facultyCoordinator}
+                    onChange={e => setFacultyCoordinator(e.target.value)}
+                    placeholder="e.g. Prof. Radhika Iyer / Dr. Rajesh Kulkarni"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-amber-300 bg-white font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Faculty Email
+                  </label>
+                  <input
+                    type="email"
+                    value={facultyCoordinatorEmail}
+                    onChange={e => setFacultyCoordinatorEmail(e.target.value)}
+                    placeholder="e.g. radhika.iyer@mitsgwalior.in"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-amber-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-[10px] font-bold text-amber-900 flex items-center gap-1">
+                  <BookOpen className="w-3 h-3 text-amber-700" />
+                  <span>Quick Faculty Select:</span>
+                </span>
+                {[
+                  { name: 'Prof. Radhika Iyer', email: 'radhika.iyer@mitsgwalior.in', dept: 'Computer Science & Engineering' },
+                  { name: 'Dr. Rajesh Kulkarni', email: 'rajesh.kulkarni@mitsgwalior.in', dept: 'Engineering & Robotics' },
+                  { name: 'Dr. Anandita Sen', email: 'dean.academics@mitsgwalior.in', dept: 'Dean Academic Affairs' },
+                  { name: 'Prof. Vikram Saxena', email: 'vikram.saxena@mitsgwalior.in', dept: 'Arts & Media Studies' },
+                  { name: 'Dr. Sunita Mehra', email: 'sunita.mehra@mitsgwalior.in', dept: 'Electronics & Communication' }
+                ].map(fac => (
+                  <button
+                    key={fac.name}
+                    type="button"
+                    onClick={() => {
+                      setFacultyCoordinator(fac.name);
+                      setFacultyCoordinatorEmail(fac.email);
+                      setFacultyCoordinatorDept(fac.dept);
+                    }}
+                    className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+                      facultyCoordinator === fac.name
+                        ? 'bg-amber-600 text-white border-amber-600 font-bold'
+                        : 'bg-white hover:bg-amber-100/70 border-amber-300 text-amber-950 font-medium'
+                    }`}
+                  >
+                    + {fac.name}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -356,44 +495,188 @@ export const EventScheduleModal: React.FC<EventScheduleModalProps> = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="sm:col-span-2">
-                <label className="block font-semibold text-slate-800 mb-1">Book Campus Venue *</label>
-                <select
-                  value={venueId}
-                  onChange={e => handleVenueChange(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 bg-white"
-                >
-                  {venues.map(v => (
-                    <option key={v.id} value={v.id}>
-                      {v.name} ({v.building}) - Cap: {v.capacity}
-                    </option>
-                  ))}
-                  <option value="custom">Custom / Outdoor / Virtual Link</option>
-                </select>
-                {venueId === 'custom' && (
-                  <input
-                    type="text"
-                    value={venue}
-                    onChange={e => setVenue(e.target.value)}
-                    placeholder="Enter custom venue name or Zoom link"
-                    className="w-full mt-2 px-3 py-1.5 text-xs rounded-lg border border-slate-300"
-                  />
-                )}
+            {/* Campus Venue Selection & Custom Venue Option */}
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <label className="block font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4 text-rose-500" />
+                  <span>Campus Venue *</span>
+                </label>
+                
+                {/* Mode Selector Tabs: Choose Preset vs Write Venue by Own */}
+                <div className="inline-flex rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-0.5 shadow-2xs self-start sm:self-auto">
+                  <button
+                    type="button"
+                    id="btn-venue-preset-tab"
+                    onClick={() => {
+                      setVenueMode('preset');
+                      if (venues.length > 0 && (!venueId || venueId === 'custom')) {
+                        setVenueId(venues[0].id);
+                        setVenue(venues[0].name);
+                        setCapacity(venues[0].capacity);
+                      }
+                    }}
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      venueMode === 'preset'
+                        ? 'bg-indigo-600 text-white shadow-2xs'
+                        : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                    }`}
+                  >
+                    <span>🏛️ Choose Preset Venue</span>
+                  </button>
+                  <button
+                    type="button"
+                    id="btn-venue-custom-tab"
+                    onClick={() => {
+                      setVenueMode('custom');
+                      setVenueId('custom');
+                    }}
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      venueMode === 'custom'
+                        ? 'bg-indigo-600 text-white shadow-2xs'
+                        : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                    }`}
+                  >
+                    <span>✍️ Write Venue by Own</span>
+                  </button>
+                </div>
               </div>
 
-              <div>
-                <label className="block font-semibold text-slate-800 mb-1">Capacity / Seats *</label>
-                <input
-                  type="number"
-                  min={10}
-                  max={2000}
-                  value={capacity}
-                  onChange={e => setCapacity(Number(e.target.value))}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300"
-                  required
-                />
-              </div>
+              {venueMode === 'preset' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-2">
+                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                      Select University Venue from Directory
+                    </label>
+                    <select
+                      value={venueId}
+                      onChange={e => {
+                        if (e.target.value === 'custom') {
+                          setVenueMode('custom');
+                          setVenueId('custom');
+                        } else {
+                          handleVenueChange(e.target.value);
+                        }
+                      }}
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                    >
+                      {venues.map(v => (
+                        <option key={v.id} value={v.id}>
+                          {v.name} ({v.building}) — Capacity: {v.capacity}
+                        </option>
+                      ))}
+                      <option value="custom">✍️ Other / Write Campus Venue by Own...</option>
+                    </select>
+
+                    <div className="flex items-center justify-between mt-1.5 text-[11px] text-slate-500">
+                      <span className="truncate">Venue: <strong className="text-slate-800 dark:text-slate-200">{venue}</strong></span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setVenueMode('custom');
+                          setVenueId('custom');
+                        }}
+                        className="text-indigo-600 dark:text-indigo-400 hover:underline font-semibold shrink-0 ml-2"
+                      >
+                        Write custom venue instead &rarr;
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                      Capacity / Seats *
+                    </label>
+                    <input
+                      type="number"
+                      min={5}
+                      max={5000}
+                      value={capacity}
+                      onChange={e => setCapacity(Number(e.target.value))}
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                      required
+                    />
+                  </div>
+                </div>
+              ) : (
+                /* Write Campus Venue by Own Option */
+                <div className="space-y-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-2">
+                      <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">
+                        Write Campus Venue Name & Location *
+                      </label>
+                      <input
+                        type="text"
+                        id="input-write-venue-own"
+                        value={venue}
+                        onChange={e => setVenue(e.target.value)}
+                        placeholder="e.g., Mechanical Seminar Hall 2, SAC Amphitheatre, Lab 105, Room 204..."
+                        className="w-full px-3 py-2 text-xs rounded-lg border border-indigo-500 dark:border-indigo-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">
+                        Seats / Expected Audience *
+                      </label>
+                      <input
+                        type="number"
+                        min={5}
+                        max={5000}
+                        value={capacity}
+                        onChange={e => setCapacity(Number(e.target.value))}
+                        className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* Quick Campus Suggestions to click & autofill */}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      Quick Campus Locations:
+                    </span>
+                    {[
+                      'Main Block Auditorium',
+                      'SAC Open Air Amphitheatre',
+                      'Mechanical Seminar Hall 1',
+                      'Civil Dept Conference Hall',
+                      'MCA Smart Lab 2',
+                      'MITS Central Sports Ground',
+                      'Electrical Engineering Seminar Hall',
+                      'Virtual Meeting (Google Meet / Zoom)'
+                    ].map(loc => (
+                      <button
+                        key={loc}
+                        type="button"
+                        onClick={() => {
+                          setVenue(loc);
+                          if (loc.includes('Amphitheatre') || loc.includes('Sports')) {
+                            setCapacity(350);
+                          } else if (loc.includes('Auditorium')) {
+                            setCapacity(250);
+                          } else if (loc.includes('Lab')) {
+                            setCapacity(60);
+                          } else if (loc.includes('Virtual')) {
+                            setCapacity(300);
+                          } else {
+                            setCapacity(100);
+                          }
+                        }}
+                        className={`text-[10px] px-2.5 py-0.5 rounded-full border transition-colors cursor-pointer ${
+                          venue === loc
+                            ? 'bg-indigo-600 text-white border-indigo-600 font-bold'
+                            : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-400'
+                        }`}
+                      >
+                        + {loc}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -520,18 +803,18 @@ export const EventScheduleModal: React.FC<EventScheduleModalProps> = ({
           </div>
 
           {/* Submit Buttons */}
-          <div className="pt-4 border-t border-slate-200 flex justify-end gap-2">
+          <div className="pt-4 border-t border-slate-200 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors"
+              className="w-full sm:w-auto px-4 py-2.5 text-xs font-semibold rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors text-center cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2 text-xs font-bold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-1.5"
+              className="w-full sm:w-auto px-5 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-sm disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <Sparkles className="w-4 h-4" />
               <span>{loading ? 'Saving...' : editingEvent ? 'Save & Notify Attendees' : 'Publish & Schedule Event'}</span>

@@ -7,7 +7,9 @@ export interface IRegistration extends Document {
   userName: string;
   userEmail: string;
   studentId?: string;
+  phone?: string;
   department?: string;
+  year?: string;
   ticketCode: string;
   qrCodeUrl?: string;
   registeredAt: Date;
@@ -26,7 +28,9 @@ const RegistrationSchema: Schema<IRegistration> = new Schema(
     userName: { type: String, required: true },
     userEmail: { type: String, required: true, lowercase: true, index: true },
     studentId: { type: String },
+    phone: { type: String },
     department: { type: String },
+    year: { type: String },
     ticketCode: { type: String, required: true, unique: true, index: true },
     qrCodeUrl: { type: String },
     registeredAt: { type: Date, default: Date.now },

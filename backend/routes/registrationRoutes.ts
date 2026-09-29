@@ -16,6 +16,10 @@ export const createRegistrationRoutes = (
     notificationsStore
   );
 
+  router.get('/', controller.getAllRegistrations);
+  router.post('/manual', controller.manualRegisterCandidate);
+  router.put('/:id/status', controller.updateStatus);
+  router.delete('/:id', controller.deleteRegistrationById);
   router.post('/:id/register', controller.registerForEvent);
   router.delete('/:id/register', controller.cancelRegistration);
   router.get('/user/:userId', controller.getUserRegistrations);

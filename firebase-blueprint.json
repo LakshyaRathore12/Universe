@@ -1,0 +1,147 @@
+{
+  "entities": {
+    "UniversityEvent": {
+      "title": "UniversityEvent",
+      "description": "An academic or extracurricular campus event hosted by a club.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 200 },
+        "tagline": { "type": "string", "maxLength": 300 },
+        "description": { "type": "string", "maxLength": 4000 },
+        "clubId": { "type": "string", "maxLength": 128 },
+        "clubName": { "type": "string", "maxLength": 150 },
+        "clubLogo": { "type": "string", "maxLength": 1000 },
+        "category": { "type": "string", "maxLength": 50 },
+        "coverImage": { "type": "string", "maxLength": 1000 },
+        "startDate": { "type": "string", "maxLength": 30 },
+        "startTime": { "type": "string", "maxLength": 20 },
+        "endDate": { "type": "string", "maxLength": 30 },
+        "endTime": { "type": "string", "maxLength": 20 },
+        "venue": { "type": "string", "maxLength": 200 },
+        "isOnline": { "type": "boolean" },
+        "meetingLink": { "type": "string", "maxLength": 500 },
+        "capacity": { "type": "number" },
+        "registeredCount": { "type": "number" },
+        "status": { "type": "string", "enum": ["upcoming", "ongoing", "completed", "cancelled"] },
+        "contactEmail": { "type": "string", "maxLength": 150 },
+        "createdBy": { "type": "string", "maxLength": 128 },
+        "driveFolderId": { "type": "string", "maxLength": 200 },
+        "createdAt": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["title", "clubId", "clubName", "category", "startDate", "status"]
+    },
+    "Club": {
+      "title": "Club",
+      "description": "A university recognized student society or club.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 150 },
+        "category": { "type": "string", "maxLength": 50 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "logo": { "type": "string", "maxLength": 1000 },
+        "bannerImage": { "type": "string", "maxLength": 1000 },
+        "leadName": { "type": "string", "maxLength": 100 },
+        "leadEmail": { "type": "string", "maxLength": 150 },
+        "leadPhone": { "type": "string", "maxLength": 30 },
+        "facultyAdvisor": { "type": "string", "maxLength": 100 },
+        "memberCount": { "type": "number" },
+        "eventsHosted": { "type": "number" },
+        "foundedYear": { "type": "number" },
+        "isVerified": { "type": "boolean" }
+      },
+      "required": ["name", "category", "leadEmail"]
+    },
+    "Registration": {
+      "title": "Registration",
+      "description": "A candidate RSVP and ticket registration record.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "eventId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "userName": { "type": "string", "maxLength": 100 },
+        "userEmail": { "type": "string", "maxLength": 150 },
+        "studentId": { "type": "string", "maxLength": 50 },
+        "phone": { "type": "string", "maxLength": 30 },
+        "department": { "type": "string", "maxLength": 100 },
+        "year": { "type": "string", "maxLength": 50 },
+        "ticketCode": { "type": "string", "maxLength": 100 },
+        "registeredAt": { "type": "string", "maxLength": 50 },
+        "status": { "type": "string", "enum": ["confirmed", "checked_in", "cancelled"] }
+      },
+      "required": ["eventId", "userName", "userEmail", "ticketCode", "status"]
+    },
+    "DriveResource": {
+      "title": "DriveResource",
+      "description": "A Google Drive file attachment, syllabus, presentation, or candidate report linked to an event or club.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "fileId": { "type": "string", "maxLength": 200 },
+        "name": { "type": "string", "maxLength": 300 },
+        "mimeType": { "type": "string", "maxLength": 150 },
+        "webViewLink": { "type": "string", "maxLength": 1000 },
+        "iconLink": { "type": "string", "maxLength": 1000 },
+        "thumbnailLink": { "type": "string", "maxLength": 1000 },
+        "sizeBytes": { "type": "number" },
+        "ownerEmail": { "type": "string", "maxLength": 150 },
+        "eventId": { "type": "string", "maxLength": 128 },
+        "clubId": { "type": "string", "maxLength": 128 },
+        "uploadedAt": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["fileId", "name", "mimeType", "webViewLink"]
+    },
+    "ParticipationCertificate": {
+      "title": "ParticipationCertificate",
+      "description": "An official verified digital certificate of event participation.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "registrationId": { "type": "string", "maxLength": 128 },
+        "eventId": { "type": "string", "maxLength": 128 },
+        "eventTitle": { "type": "string", "maxLength": 200 },
+        "eventCategory": { "type": "string", "maxLength": 50 },
+        "eventDate": { "type": "string", "maxLength": 30 },
+        "eventTime": { "type": "string", "maxLength": 50 },
+        "eventVenue": { "type": "string", "maxLength": 200 },
+        "clubId": { "type": "string", "maxLength": 128 },
+        "clubName": { "type": "string", "maxLength": 150 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "studentName": { "type": "string", "maxLength": 100 },
+        "studentEmail": { "type": "string", "maxLength": 150 },
+        "studentId": { "type": "string", "maxLength": 50 },
+        "department": { "type": "string", "maxLength": 100 },
+        "year": { "type": "string", "maxLength": 50 },
+        "issuedAt": { "type": "string", "maxLength": 50 },
+        "issuedBy": { "type": "string", "maxLength": 150 },
+        "verificationHash": { "type": "string", "maxLength": 200 },
+        "qrCodeUrl": { "type": "string", "maxLength": 1000 }
+      },
+      "required": ["registrationId", "eventId", "studentName", "studentEmail", "issuedAt"]
+    }
+  },
+  "firestore": {
+    "/events/{eventId}": {
+      "schema": { "$ref": "UniversityEvent" },
+      "description": "Campus events directory with details, scheduling, and Drive attachments."
+    },
+    "/clubs/{clubId}": {
+      "schema": { "$ref": "Club" },
+      "description": "Registered campus societies and clubs."
+    },
+    "/registrations/{registrationId}": {
+      "schema": { "$ref": "Registration" },
+      "description": "Candidate registration and check-in tickets."
+    },
+    "/drive_resources/{resourceId}": {
+      "schema": { "$ref": "DriveResource" },
+      "description": "Google Drive files and study materials linked to campus events and clubs."
+    },
+    "/certificates/{certificateId}": {
+      "schema": { "$ref": "ParticipationCertificate" },
+      "description": "Verifiable digital participation certificates issued to event attendees."
+    }
+  }
+}

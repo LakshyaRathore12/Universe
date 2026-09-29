@@ -1,6 +1,6 @@
 {
-  "name": "UniVerse: University Event Management System",
-  "description": "University event management portal for students to discover workshops, seminars, and club events with scheduling, RSVP ticketing, and real-time email notifications.",
+  "name": "Universe - Madhav Institute of Technology and Science Gwalior (Estd. 1957)",
+  "description": "Universe: Central event and workshop management portal for Madhav Institute of Technology and Science Gwalior (Estd. 1957). Features role-based access for students (@mitsgwl.ac.in), faculty and deans (@mitsgwalior.in), club leaders, and master control.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

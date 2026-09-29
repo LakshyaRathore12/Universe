@@ -1,4 +1,4 @@
-export type UserRole = 'student' | 'club_organizer' | 'admin';
+export type UserRole = 'student' | 'faculty' | 'club_organizer' | 'admin' | 'master_admin';
 
 export interface User {
   id: string;
@@ -6,11 +6,47 @@ export interface User {
   email: string;
   role: UserRole;
   avatar: string;
+  isMasterControl?: boolean;
   studentId?: string;
+  facultyId?: string;
+  designation?: string; // e.g. 'Professor', 'Associate Professor', 'Assistant Professor', 'Faculty Advisor', 'Head of Department'
+  phone?: string;
   department?: string;
   year?: string;
   clubId?: string; // If club organizer
   clubName?: string;
+}
+
+export interface ClubMember {
+  id: string;
+  clubId: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  studentId?: string;
+  phone?: string;
+  department?: string;
+  year?: string;
+  role: 'leader' | 'co_leader' | 'member';
+  roleTitle?: string; // e.g. "Club President", "Technical Convener", "Core Member"
+  status: 'active' | 'pending'; // Pending requests can only be approved by Faculty
+  requestedAt?: string;
+  joinedAt?: string; // Exact timestamp when member joined
+  approvedBy?: string; // Faculty member name
+  approvedAt?: string;
+}
+
+export interface ClubAdminInfo {
+  id: string;
+  name: string;
+  email: string;
+  enrollmentNo: string;
+  phone: string;
+  year: string; // e.g., '1st Year', '2nd Year', '3rd Year', '4th Year'
+  department?: string;
+  roleTitle?: string; // e.g. 'President / Convener', 'Vice Lead', 'Technical Head'
+  addedAt?: string;
+  addedBy?: string;
 }
 
 export interface Club {
@@ -22,7 +58,13 @@ export interface Club {
   bannerImage: string;
   leadName: string;
   leadEmail: string;
+  leadPhone?: string;
+  leadEnrollmentNo?: string;
+  leadYear?: string;
+  admins: ClubAdminInfo[];
+  members?: ClubMember[];
   facultyAdvisor: string;
+  facultyAdvisorEmail?: string;
   memberCount: number;
   eventsHosted: number;
   foundedYear: number;
@@ -93,6 +135,9 @@ export interface UniversityEvent {
   agenda: AgendaItem[];
   prerequisites?: string[];
   certificatesProvided: boolean;
+  facultyCoordinator?: string; // Faculty Coordinator / Academic Advisor name
+  facultyCoordinatorEmail?: string;
+  facultyCoordinatorDept?: string;
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
   contactEmail: string;
   createdAt: string;
@@ -104,14 +149,68 @@ export interface Registration {
   userId: string;
   userName: string;
   userEmail: string;
-  studentId?: string;
+  studentId?: string; // Enrollment / Roll Number
+  phone?: string;     // Phone Number (e.g. +91 98765 43210)
   department?: string;
+  year?: string;
   ticketCode: string;
   registeredAt: string;
   status: 'confirmed' | 'checked_in' | 'cancelled';
+  checkedInAt?: string;
   qrCodeUrl?: string;
   emailSent: boolean;
   emailSentAt?: string;
+  reminderSent?: boolean;
+  reminderSentAt?: string;
+  notes?: string;
+  event?: UniversityEvent;
+  // Attendance & Participation Certificate Fields
+  attendanceStatus?: 'present' | 'absent' | 'unmarked';
+  attendanceMarkedAt?: string;
+  attendanceMarkedBy?: string;
+  certificateId?: string;
+  certificateIssuedAt?: string;
+  certificateEmailSent?: boolean;
+  certificateEmailSentAt?: string;
+  certificateUrl?: string;
+}
+
+export interface ParticipationCertificate {
+  id: string; // e.g. CERT-2026-CS-8921
+  registrationId: string;
+  eventId: string;
+  eventTitle: string;
+  eventCategory: string;
+  eventDate: string;
+  eventTime: string;
+  eventVenue: string;
+  clubId: string;
+  clubName: string;
+  userId: string;
+  studentName: string;
+  studentEmail: string;
+  studentId: string;
+  department: string;
+  year?: string;
+  issuedAt: string;
+  issuedBy: string;
+  signatories: {
+    name: string;
+    title: string;
+    organization: string;
+  }[];
+  verificationHash: string;
+  qrCodeUrl: string;
+}
+
+export interface EventAttendanceStats {
+  eventId: string;
+  totalRegistered: number;
+  presentCount: number;
+  absentCount: number;
+  unmarkedCount: number;
+  attendanceRate: number; // percentage
+  certificatesIssuedCount: number;
 }
 
 export interface EmailNotification {
@@ -123,7 +222,7 @@ export interface EmailNotification {
   subject: string;
   htmlContent: string;
   plainText: string;
-  type: 'registration_confirmation' | 'schedule_change' | 'event_reminder' | 'organizer_announcement' | 'cancellation';
+  type: 'registration_confirmation' | 'schedule_change' | 'event_reminder' | 'organizer_announcement' | 'cancellation' | 'participation_certificate';
   eventId?: string;
   eventTitle?: string;
   ticketCode?: string;

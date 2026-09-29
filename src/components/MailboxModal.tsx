@@ -11,7 +11,8 @@ import {
   Search,
   Filter,
   RefreshCw,
-  Send
+  Send,
+  ChevronLeft
 } from 'lucide-react';
 import { EmailNotification, User } from '../types.js';
 
@@ -36,6 +37,7 @@ export const MailboxModal: React.FC<MailboxModalProps> = ({
   const [filterType, setFilterType] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewScope, setViewScope] = useState<'my_inbox' | 'all_campus'>('my_inbox');
+  const [mobileShowDetail, setMobileShowDetail] = useState(false);
 
   if (!isOpen) return null;
 
@@ -73,6 +75,8 @@ export const MailboxModal: React.FC<MailboxModalProps> = ({
         return <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold">Schedule Update</span>;
       case 'organizer_announcement':
         return <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-bold">Club Broadcast</span>;
+      case 'event_reminder':
+        return <span className="px-2 py-0.5 rounded bg-purple-100 text-purple-800 text-[10px] font-bold">⏰ 1-Hour Reminder</span>;
       case 'cancellation':
         return <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 text-[10px] font-bold">Cancelled</span>;
       default:
@@ -161,6 +165,7 @@ export const MailboxModal: React.FC<MailboxModalProps> = ({
             >
               <option value="all">All Notifications</option>
               <option value="registration_confirmation">Pass Confirmations</option>
+              <option value="event_reminder">⏰ 1-Hour Reminders</option>
               <option value="schedule_change">Schedule Updates</option>
               <option value="organizer_announcement">Club Broadcasts</option>
               <option value="cancellation">Cancellations</option>
@@ -173,7 +178,9 @@ export const MailboxModal: React.FC<MailboxModalProps> = ({
         <div className="flex-1 flex overflow-hidden">
           
           {/* Email List Column */}
-          <div className="w-full sm:w-2/5 border-r border-slate-200 overflow-y-auto bg-white divide-y divide-slate-100">
+          <div className={`w-full sm:w-2/5 border-r border-slate-200 overflow-y-auto bg-white divide-y divide-slate-100 ${
+            mobileShowDetail ? 'hidden sm:block' : 'block'
+          }`}>
             {filtered.length === 0 ? (
               <div className="p-8 text-center text-xs text-slate-400">
                 <Mail className="w-8 h-8 mx-auto text-slate-300 mb-2" />
@@ -184,7 +191,10 @@ export const MailboxModal: React.FC<MailboxModalProps> = ({
               filtered.map((item) => (
                 <div
                   key={item.id}
-                  onClick={() => setSelectedEmail(item)}
+                  onClick={() => {
+                    setSelectedEmail(item);
+                    setMobileShowDetail(true);
+                  }}
                   className={`p-3.5 cursor-pointer transition-colors text-xs ${
                     activeEmail?.id === item.id
                       ? 'bg-indigo-50/70 border-l-4 border-indigo-600'
@@ -218,10 +228,23 @@ export const MailboxModal: React.FC<MailboxModalProps> = ({
           </div>
 
           {/* Email Preview Column */}
-          <div className="hidden sm:flex flex-1 flex-col bg-slate-50 overflow-hidden">
+          <div className={`${
+            mobileShowDetail ? 'flex' : 'hidden sm:flex'
+          } flex-1 flex-col bg-slate-50 overflow-hidden`}>
             {activeEmail ? (
               <div className="flex-1 flex flex-col h-full overflow-hidden">
                 
+                {/* Mobile Back Button */}
+                <div className="sm:hidden px-4 pt-3 pb-1 bg-white border-b border-slate-100">
+                  <button
+                    onClick={() => setMobileShowDetail(false)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    <span>Back to Messages</span>
+                  </button>
+                </div>
+
                 {/* Email Meta Header */}
                 <div className="p-4 bg-white border-b border-slate-200 text-xs">
                   <div className="flex items-center justify-between">

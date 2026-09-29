@@ -12,7 +12,9 @@ import {
   AlertCircle,
   ExternalLink,
   Sparkles,
-  Share2
+  Share2,
+  GraduationCap,
+  BookOpen
 } from 'lucide-react';
 import { UniversityEvent, User } from '../types.js';
 import { downloadIcsFile } from '../utils/calendar.js';
@@ -107,7 +109,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
           <div className="p-6 space-y-6">
             
             {/* Quick Meta Strip */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200/80 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200/80 text-xs">
               <div className="flex items-start gap-2.5">
                 <Calendar className="w-4 h-4 text-indigo-600 mt-0.5" />
                 <div>
@@ -136,6 +138,15 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                   <div className={`text-[11px] ${seatsLeft > 0 ? 'text-emerald-600 font-semibold' : 'text-rose-600 font-bold'}`}>
                     {seatsLeft > 0 ? `${seatsLeft} spots open` : 'Capacity Reached'}
                   </div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2.5">
+                <GraduationCap className="w-4 h-4 text-amber-600 mt-0.5" />
+                <div>
+                  <div className="font-bold text-slate-900">Faculty Coordinator</div>
+                  <div className="text-slate-800 font-semibold">{event.facultyCoordinator || 'Academic Advisor'}</div>
+                  <div className="text-[11px] text-amber-700 font-medium">{event.facultyCoordinatorEmail || 'Faculty Oversight'}</div>
                 </div>
               </div>
             </div>
