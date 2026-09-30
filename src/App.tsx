@@ -16,7 +16,8 @@ import {
   CheckCircle2,
   SlidersHorizontal,
   ChevronDown,
-  LayoutGrid
+  LayoutGrid,
+  Code2
 } from 'lucide-react';
 import { 
   Club, 
@@ -48,8 +49,10 @@ import { OrganizerDashboard } from './components/OrganizerDashboard.js';
 import { AdminRegistrationsView } from './components/AdminRegistrationsView.js';
 import { MailboxModal } from './components/MailboxModal.js';
 import { NotificationToast } from './components/NotificationToast.js';
+import { DevelopersView } from './components/DevelopersView.js';
 import { ReminderToast, ReminderAlertData } from './components/ReminderToast.js';
 import { GoogleDriveModal } from './components/GoogleDriveModal.js';
+import { DatabaseManagerModal } from './components/DatabaseManagerModal.js';
 import { auth, getAccessToken } from './lib/firebase.js';
 
 export default function App() {
@@ -57,8 +60,11 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(INITIAL_USERS[0]);
   const [availableUsers, setAvailableUsers] = useState<User[]>(INITIAL_USERS);
 
+  // Database Manager Modal State
+  const [databaseModalOpen, setDatabaseModalOpen] = useState(false);
+
   // Active View Tab (Schedule and Calendar are accessed directly on the dashboard)
-  const [currentTab, setCurrentTab] = useState<'events' | 'clubs' | 'passes' | 'organizer' | 'admin'>('events');
+  const [currentTab, setCurrentTab] = useState<'events' | 'clubs' | 'passes' | 'organizer' | 'admin' | 'developers'>('events');
   const [dashboardViewMode, setDashboardViewMode] = useState<'cards' | 'calendar'>('cards');
 
   // Dark Mode / Light Mode Theme State
@@ -545,6 +551,7 @@ export default function App() {
         myPassesCount={myRegistrations.length}
         onOpenGoogleDrive={() => setGoogleDriveModalOpen(true)}
         isGoogleDriveConnected={!!googleDriveToken}
+        onOpenDatabaseManager={() => setDatabaseModalOpen(true)}
         theme={theme}
         onToggleTheme={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
         onMarkNotificationsRead={() => {
@@ -606,6 +613,17 @@ export default function App() {
                         {unreadEmailCount}
                       </span>
                     )}
+                  </button>
+
+                  {/* Developers Option on Dashboard */}
+                  <button
+                    id="btn-hero-developers"
+                    onClick={() => setCurrentTab('developers')}
+                    className="px-4 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-800 text-slate-200 text-xs font-semibold transition-colors flex items-center gap-2 border border-slate-700/60 cursor-pointer"
+                    title="Meet the Developers (Lakshya Rathore)"
+                  >
+                    <Code2 className="w-4 h-4 text-cyan-400" />
+                    <span>Developers</span>
                   </button>
                 </div>
               </div>
@@ -755,6 +773,71 @@ export default function App() {
               )}
             </div>
 
+            {/* Developer Option Spotlight Card on Dashboard */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                {/* Team Avatars Overlap */}
+                <div className="flex -space-x-3 overflow-hidden p-0.5 shrink-0">
+                  <div className="w-11 h-11 rounded-full ring-2 ring-white dark:ring-slate-900 overflow-hidden shrink-0 shadow-sm" title="Lakshya Rathore">
+                    <img
+                      src={localStorage.getItem('avatar_lakshya-rathore') || '/lakshya-profile.jpg'}
+                      alt="Lakshya Rathore"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src = '/lakshya.jpg';
+                      }}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="w-11 h-11 rounded-full ring-2 ring-white dark:ring-slate-900 overflow-hidden shrink-0 shadow-sm" title="Lakshya Sharma">
+                    <img
+                      src={localStorage.getItem('avatar_lakshya-sharma') || '/lakshya-sharma.jpg'}
+                      alt="Lakshya Sharma"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src = 'https://ui-avatars.com/api/?name=Lakshya+Sharma&size=96&background=6366f1&color=fff';
+                      }}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="w-11 h-11 rounded-full ring-2 ring-white dark:ring-slate-900 overflow-hidden shrink-0 shadow-sm" title="Jatin Gehlod">
+                    <img
+                      src={localStorage.getItem('avatar_jatin-gehlod') || '/jatin-gehlod.jpg'}
+                      alt="Jatin Gehlod"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src = 'https://ui-avatars.com/api/?name=Jatin+Gehlod&size=96&background=8b5cf6&color=fff';
+                      }}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                      Lakshya Rathore, Lakshya Sharma & Jatin Gehlod
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/60">
+                      Platform Developers
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Mathematics & Computing (Aug 2025 – June 2029) • MITS Gwalior (BTMC25O1065 / BTMC25O1066)
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
+                {/* Full Profile button */}
+                <button
+                  id="btn-dashboard-view-developer-profile"
+                  onClick={() => setCurrentTab('developers')}
+                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+                >
+                  <Code2 className="w-3.5 h-3.5" />
+                  <span>Developers Hub</span>
+                </button>
+              </div>
+            </div>
+
           </div>
         )}
 
@@ -845,11 +928,17 @@ export default function App() {
               loadUserData();
             }}
             availableUsers={availableUsers}
+            onOpenDatabaseManager={() => setDatabaseModalOpen(true)}
             onManageClubAdmins={(club) => {
               setSelectedClubForAdmins(club);
               setClubAdminsModalOpen(true);
             }}
           />
+        )}
+
+        {/* TAB 7: DEVELOPERS PROFILE & CREDITS */}
+        {currentTab === 'developers' && (
+          <DevelopersView onNavigateToEvents={() => setCurrentTab('events')} />
         )}
 
       </main>
@@ -859,26 +948,20 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex flex-col sm:flex-row items-center gap-2">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-xs">
-                U
+              <div className="w-7 h-7 rounded-full bg-white flex items-center justify-center p-0.5 shadow-xs shrink-0 overflow-hidden ring-1 ring-slate-200 dark:ring-slate-700">
+                <img 
+                  src="/mits-logo.png" 
+                  alt="MITS Gwalior" 
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = '/mits-logo.jpg';
+                  }}
+                  className="w-full h-full object-contain" 
+                />
               </div>
               <span className="font-heading font-extrabold text-slate-900 dark:text-white text-sm">Universe</span>
             </div>
             <span className="hidden sm:inline text-slate-300 dark:text-slate-600">•</span>
             <span className="text-slate-600 dark:text-slate-300 font-medium">Madhav institute of technology and science Gwalior (Estd. 1957)</span>
-          </div>
-
-          <div className="flex items-center gap-4 text-[11px] text-slate-500 dark:text-slate-400">
-            <span>Dean of Student Affairs</span>
-            <span>•</span>
-            <span>Academic Council</span>
-            <span>•</span>
-            <button 
-              onClick={() => setMailboxModalOpen(true)}
-              className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-semibold"
-            >
-              Simulated Mailbox ({emails.length} dispatches)
-            </button>
           </div>
         </div>
       </footer>
@@ -1029,6 +1112,14 @@ export default function App() {
           setGoogleDriveToken(token);
           if (email) setGoogleDriveUserEmail(email);
         }}
+      />
+
+      <DatabaseManagerModal
+        isOpen={databaseModalOpen}
+        onClose={() => setDatabaseModalOpen(false)}
+        events={events}
+        clubs={clubs}
+        registrations={myRegistrations}
       />
 
     </div>

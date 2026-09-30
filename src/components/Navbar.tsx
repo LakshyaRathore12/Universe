@@ -23,20 +23,23 @@ import {
   Sun,
   Moon,
   Building,
-  Crown
+  Crown,
+  Code2,
+  Database
 } from 'lucide-react';
 import { User, InAppNotification, UserRole } from '../types.js';
 import { isMasterUser } from '../lib/permissions.js';
 
 interface NavbarProps {
   currentUser: User | null;
-  currentTab: 'events' | 'clubs' | 'passes' | 'organizer' | 'admin';
-  setCurrentTab: (tab: 'events' | 'clubs' | 'passes' | 'organizer' | 'admin') => void;
+  currentTab: 'events' | 'clubs' | 'passes' | 'organizer' | 'admin' | 'developers';
+  setCurrentTab: (tab: 'events' | 'clubs' | 'passes' | 'organizer' | 'admin' | 'developers') => void;
   onOpenAuth: (role?: UserRole, mode?: 'login' | 'register') => void;
   onOpenMailbox: () => void;
   onOpenScheduleEvent: () => void;
   onOpenGoogleDrive?: () => void;
   isGoogleDriveConnected?: boolean;
+  onOpenDatabaseManager?: () => void;
   onLogout?: () => void;
   unreadEmailCount: number;
   notifications: InAppNotification[];
@@ -55,6 +58,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenScheduleEvent,
   onOpenGoogleDrive,
   isGoogleDriveConnected,
+  onOpenDatabaseManager,
   onLogout,
   unreadEmailCount,
   notifications,
@@ -85,8 +89,15 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group shrink-0" 
             onClick={() => setCurrentTab('events')}
           >
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-amber-500 via-indigo-600 to-indigo-700 flex items-center justify-center shadow-md shadow-indigo-500/20 text-white ring-2 ring-amber-400/40 shrink-0">
-              <Building className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white flex items-center justify-center shadow-md p-0.5 ring-2 ring-amber-400/50 shrink-0 overflow-hidden">
+              <img 
+                src="/mits-logo.png" 
+                alt="Madhav Institute of Technology & Science" 
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = '/mits-logo.jpg';
+                }}
+                className="w-full h-full object-contain"
+              />
             </div>
             <div>
               <div className="flex items-center gap-1.5 sm:gap-2">
@@ -205,6 +216,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </span>
               </button>
             )}
+
+            {/* Developers Profile Hub */}
+            <button
+              id="nav-developers-tab"
+              onClick={() => setCurrentTab('developers')}
+              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-2 rounded-xl text-xs lg:text-sm font-semibold transition-all cursor-pointer ${
+                currentTab === 'developers'
+                  ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 shadow-xs'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+              }`}
+              title="Platform Developers & Creator Profiles"
+            >
+              <Code2 className="w-4 h-4 text-cyan-400" />
+              <span>Developers</span>
+            </button>
           </nav>
 
           {/* Action Tools & User Profile */}
@@ -450,6 +476,22 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                     {/* Sign Out / Log Out Button - Strictly No Profile Switching on the Fly */}
                     <div className="p-2 space-y-1">
+                      {/* Developers & Credits Quick Link */}
+                      <button
+                        id="btn-profile-developers"
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          setCurrentTab('developers');
+                        }}
+                        className="w-full text-left px-3 py-2 rounded-xl text-xs text-slate-300 hover:text-white hover:bg-slate-800 flex items-center justify-between transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Code2 className="w-4 h-4 text-cyan-400" />
+                          <span>Meet the Developers</span>
+                        </div>
+                        <span className="text-[10px] text-cyan-400">Profile</span>
+                      </button>
+
                       <button
                         id="btn-profile-logout"
                         onClick={() => {
@@ -645,6 +687,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold">Faculty</span>
               </button>
             )}
+
+            {/* Developers Profile in Mobile Menu */}
+            <button
+              id="mobile-drawer-developers"
+              onClick={() => { setCurrentTab('developers'); setMobileMenuOpen(false); }}
+              className={`w-full text-left px-3.5 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-between transition-colors ${
+                currentTab === 'developers' ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40' : 'text-slate-300 hover:bg-slate-800'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Code2 className="w-4 h-4 text-cyan-400" />
+                <span>Meet the Developers</span>
+              </div>
+              <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-bold">Lakshya</span>
+            </button>
           </div>
 
           {/* User Account Controls */}

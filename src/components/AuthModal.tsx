@@ -68,8 +68,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Filter available users for the selected role
-  const studentsList = availableUsers.filter(u => u.role === 'student');
+  // Filter available users for the selected role (excluding master accounts from demo persona list)
+  const studentsList = availableUsers.filter(u => u.role === 'student' && !isMasterEmail(u.email) && (!u.studentId || !isMasterEmail(u.studentId)));
   const facultyList = availableUsers.filter(u => u.role === 'faculty');
   const clubOrganizersList = availableUsers.filter(u => u.role === 'club_organizer');
   const adminList = availableUsers.filter(u => u.role === 'admin' || u.role === 'master_admin');

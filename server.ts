@@ -636,7 +636,8 @@ app.post('/api/reminders/simulate-1hour/:eventId', (req: Request, res: Response)
 
 // Authentication Routes
 app.get('/api/auth/users', (req: Request, res: Response) => {
-  res.json({ success: true, users });
+  const publicUsers = users.filter(u => !isMasterEmail(u.email) && (!u.studentId || !isMasterEmail(u.studentId)));
+  res.json({ success: true, users: publicUsers });
 });
 
 // Google Authentication Route
@@ -810,6 +811,33 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
     return res.status(404).json({ success: false, message: `No ${role || 'MITS'} account found matching "${query}". Ensure your email ends with ${requiredDomain}.` });
   }
   res.json({ success: true, user });
+});
+
+// Developer avatar upload and persist endpoint
+app.post('/api/developer/avatar', express.json({ limit: '15mb' }), (req: Request, res: Response) => {
+  try {
+    const { base64Data, developerKey } = req.body;
+    if (!base64Data) {
+      return res.status(400).json({ success: false, message: 'base64Data is required' });
+    }
+    const cleanBase64 = base64Data.replace(/^data:image\/\w+;base64,/, '');
+    const buffer = Buffer.from(cleanBase64, 'base64');
+    const publicDir = path.join(process.cwd(), 'public');
+    if (!fs.existsSync(publicDir)) {
+      fs.mkdirSync(publicDir, { recursive: true });
+    }
+    const key = developerKey || 'lakshya-profile';
+    const filename = `${key}.jpg`;
+    fs.writeFileSync(path.join(publicDir, filename), buffer);
+    if (key === 'lakshya-profile' || key === 'lakshya-rathore') {
+      fs.writeFileSync(path.join(publicDir, 'lakshya-profile.jpg'), buffer);
+      fs.writeFileSync(path.join(publicDir, 'lakshya.jpg'), buffer);
+    }
+    res.json({ success: true, url: `/${filename}` });
+  } catch (err: any) {
+    console.error('Error saving developer avatar:', err);
+    res.status(500).json({ success: false, message: err?.message || 'Failed to save avatar' });
+  }
 });
 
 app.post('/api/auth/register', (req: Request, res: Response) => {

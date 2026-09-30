@@ -328,30 +328,6 @@ export const INITIAL_USERS: User[] = [
     role: 'admin',
     phone: '+91 91122 33445',
     avatar: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=120&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'user-master-1',
-    name: 'Lakshya Rathore',
-    email: '25mc1la65@mitsgwl.ac.in',
-    role: 'student',
-    studentId: 'BTMC25O1065',
-    designation: 'Student',
-    department: 'Mathematics and computing',
-    year: '2nd Year',
-    phone: '+91 98930 11001',
-    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'user-master-2',
-    name: 'Lakshya Sharma',
-    email: '25mc1la66@mitsgwl.ac.in',
-    role: 'student',
-    studentId: 'BTMC25O1066',
-    designation: 'Student',
-    department: 'Mathematics and computing',
-    year: '2nd Year',
-    phone: '+91 98930 11002',
-    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=120&auto=format&fit=crop&q=80'
   }
 ];
 

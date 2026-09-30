@@ -33,7 +33,8 @@ import {
   Lock,
   ShieldAlert,
   LayoutGrid,
-  List
+  List,
+  Database
 } from 'lucide-react';
 import { Club, ParticipationCertificate, Registration, UniversityEvent, User } from '../types.js';
 import { exportCandidateRosterToDrive } from '../lib/googleDrive.js';
@@ -52,6 +53,7 @@ interface AdminRegistrationsViewProps {
   onManageClubAdmins?: (club: Club) => void;
   accessToken?: string | null;
   onOpenGoogleDrive?: () => void;
+  onOpenDatabaseManager?: () => void;
 }
 
 export const AdminRegistrationsView: React.FC<AdminRegistrationsViewProps> = ({
@@ -64,7 +66,8 @@ export const AdminRegistrationsView: React.FC<AdminRegistrationsViewProps> = ({
   availableUsers = [],
   onManageClubAdmins,
   accessToken,
-  onOpenGoogleDrive
+  onOpenGoogleDrive,
+  onOpenDatabaseManager
 }) => {
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);

@@ -175,3 +175,111 @@ export async function getDriveResources(eventId?: string) {
     handleFirestoreError(err, OperationType.GET, collectionPath);
   }
 }
+
+/**
+ * Seed all initial campus events, clubs, and sample registrations directly into Cloud Firestore
+ */
+export async function seedInitialFirestoreData(
+  eventsList: any[],
+  clubsList: any[],
+  registrationsList: any[]
+): Promise<{ success: boolean; eventsCount: number; clubsCount: number; registrationsCount: number; errors: string[] }> {
+  const { setDoc, doc } = await import('firebase/firestore');
+  const errors: string[] = [];
+  let eventsCount = 0;
+  let clubsCount = 0;
+  let registrationsCount = 0;
+
+  // 1. Seed Clubs
+  for (const club of clubsList) {
+    try {
+      const cleanClub = {
+        name: club.name || 'Student Club',
+        category: club.category || 'Technical',
+        description: club.description || '',
+        logo: club.logo || '',
+        bannerImage: club.bannerImage || '',
+        leadName: club.leadName || '',
+        leadEmail: club.leadEmail || 'student@mitsgwl.ac.in',
+        leadPhone: club.leadPhone || '',
+        facultyAdvisor: club.facultyAdvisor || '',
+        memberCount: typeof club.memberCount === 'number' ? club.memberCount : 25,
+        eventsHosted: typeof club.eventsHosted === 'number' ? club.eventsHosted : 3,
+        foundedYear: typeof club.foundedYear === 'number' ? club.foundedYear : 2020,
+        isVerified: Boolean(club.isVerified)
+      };
+      await setDoc(doc(db, 'clubs', club.id || `club-${Date.now()}`), cleanClub, { merge: true });
+      clubsCount++;
+    } catch (err: any) {
+      console.warn('Club seed error:', club.id, err);
+      errors.push(`Club ${club.name}: ${err?.message || err}`);
+    }
+  }
+
+  // 2. Seed Events
+  for (const ev of eventsList) {
+    try {
+      const cleanEvent = {
+        title: ev.title || 'MITS University Event',
+        tagline: ev.tagline || '',
+        description: ev.description || '',
+        clubId: ev.clubId || 'club-iste',
+        clubName: ev.clubName || 'ISTE Students Chapter MITS',
+        clubLogo: ev.clubLogo || '',
+        category: ev.category || 'Workshop',
+        coverImage: ev.coverImage || '',
+        startDate: ev.startDate || '2025-10-15',
+        startTime: ev.startTime || '10:00 AM',
+        endDate: ev.endDate || ev.startDate || '2025-10-15',
+        endTime: ev.endTime || '01:00 PM',
+        venue: ev.venue || 'MITS Central Auditorium',
+        isOnline: Boolean(ev.isOnline),
+        meetingLink: ev.meetingLink || '',
+        capacity: typeof ev.capacity === 'number' ? ev.capacity : 100,
+        registeredCount: typeof ev.registeredCount === 'number' ? ev.registeredCount : 0,
+        status: ['upcoming', 'ongoing', 'completed', 'cancelled'].includes(ev.status) ? ev.status : 'upcoming',
+        contactEmail: ev.contactEmail || 'events@mitsgwl.ac.in',
+        createdBy: auth.currentUser?.uid || 'admin',
+        createdAt: ev.createdAt || new Date().toISOString()
+      };
+      await setDoc(doc(db, 'events', ev.id || `evt-${Date.now()}`), cleanEvent, { merge: true });
+      eventsCount++;
+    } catch (err: any) {
+      console.warn('Event seed error:', ev.id, err);
+      errors.push(`Event ${ev.title}: ${err?.message || err}`);
+    }
+  }
+
+  // 3. Seed Registrations
+  for (const reg of registrationsList) {
+    try {
+      const cleanReg = {
+        eventId: reg.eventId || 'evt-1',
+        userId: auth.currentUser?.uid || reg.userId || 'user-student-1',
+        userName: reg.userName || 'Student Attendee',
+        userEmail: reg.userEmail || 'student@mitsgwl.ac.in',
+        studentId: reg.studentId || '0901CS221089',
+        phone: reg.phone || '',
+        department: reg.department || 'Computer Science & Engineering',
+        year: reg.year || '3rd Year',
+        ticketCode: reg.ticketCode || `MITS-${Math.floor(100000 + Math.random() * 900000)}`,
+        registeredAt: reg.registeredAt || new Date().toISOString(),
+        status: ['confirmed', 'checked_in', 'cancelled'].includes(reg.status) ? reg.status : 'confirmed'
+      };
+      await setDoc(doc(db, 'registrations', reg.id || `reg-${Date.now()}`), cleanReg, { merge: true });
+      registrationsCount++;
+    } catch (err: any) {
+      console.warn('Registration seed error:', reg.id, err);
+      errors.push(`Registration ${reg.ticketCode}: ${err?.message || err}`);
+    }
+  }
+
+  return {
+    success: errors.length === 0,
+    eventsCount,
+    clubsCount,
+    registrationsCount,
+    errors
+  };
+}
+
