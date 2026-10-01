@@ -820,7 +820,7 @@ export default function App() {
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Mathematics & Computing (Aug 2025 – June 2029) • MITS Gwalior (BTMC25O1065 / BTMC25O1066)
+                    Mathematics & Computing (Aug 2025 – June 2029) • MITS Gwalior (BTMC25O1065 / BTMC25O1066 / BTMC25O1054)
                   </p>
                 </div>
               </div>

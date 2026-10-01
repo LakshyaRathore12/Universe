@@ -707,6 +707,7 @@ app.post('/api/auth/google', (req: Request, res: Response) => {
 // Master accounts:
 // - Lakshya Rathore (25mc1la65@mitsgwl.ac.in, Enrollment: BTMC25O1065, Mathematics and computing 2nd Year)
 // - Lakshya Sharma (25mc1la66@mitsgwl.ac.in, Enrollment: BTMC25O1066, Mathematics and computing 2nd Year)
+// - Jatin Gehlod (25mc1ja55@mitsgwl.ac.in, Enrollment: BTMC25O1054, Mathematics and computing 2nd Year)
 const isMasterEmail = (email?: string | null): boolean => {
   if (!email) return false;
   const clean = email.trim().toLowerCase();
@@ -714,10 +715,13 @@ const isMasterEmail = (email?: string | null): boolean => {
     clean === '25mc1la65@mitsgwl.ac.in' ||
     clean === '25mc1la65@mits.gwl.ac.in' ||
     clean === '25mc1la66@mitsgwl.ac.in' ||
+    clean === '25mc1ja55@mitsgwl.ac.in' ||
     clean === 'btmc25o1065' ||
     clean === 'btmc25o1066' ||
+    clean === 'btmc25o1054' ||
     clean === '25mc1la65' ||
-    clean === '25mc1la66'
+    clean === '25mc1la66' ||
+    clean === '25mc1ja55'
   );
 };
 
@@ -744,19 +748,22 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
     }
     if (!masterUser) {
       const isLakshya1 = query.includes('65') || query.includes('1065');
+      const isJatin = query.includes('ja55') || query.includes('1054') || query.includes('jatin');
       masterUser = {
         id: `usr-master-${Date.now()}`,
-        name: isLakshya1 ? 'Lakshya Rathore' : 'Lakshya Sharma',
-        email: isLakshya1 ? '25mc1la65@mitsgwl.ac.in' : '25mc1la66@mitsgwl.ac.in',
+        name: isJatin ? 'Jatin Gehlod' : (isLakshya1 ? 'Lakshya Rathore' : 'Lakshya Sharma'),
+        email: isJatin ? '25mc1ja55@mitsgwl.ac.in' : (isLakshya1 ? '25mc1la65@mitsgwl.ac.in' : '25mc1la66@mitsgwl.ac.in'),
         role: 'student',
-        studentId: isLakshya1 ? 'BTMC25O1065' : 'BTMC25O1066',
+        studentId: isJatin ? 'BTMC25O1054' : (isLakshya1 ? 'BTMC25O1065' : 'BTMC25O1066'),
         designation: 'Student',
         department: 'Mathematics and computing',
         year: '2nd Year',
-        phone: isLakshya1 ? '+91 98930 11001' : '+91 98930 11002',
-        avatar: isLakshya1 
-          ? 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80'
-          : 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=120&auto=format&fit=crop&q=80'
+        phone: isJatin ? '+91 98930 11003' : (isLakshya1 ? '+91 98930 11001' : '+91 98930 11002'),
+        avatar: isJatin 
+          ? '/jatin-gehlod.jpg'
+          : (isLakshya1 
+              ? 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80'
+              : 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=120&auto=format&fit=crop&q=80')
       };
       users.push(masterUser);
     }

@@ -135,7 +135,7 @@ export const DevelopersView: React.FC<DevelopersViewProps> = ({ onNavigateToEven
         institution: 'Madhav Institute of Technology & Science, Gwalior',
         degree: 'B.Tech in Mathematics and Computing',
         duration: 'Aug 2025 - June 2029',
-        enrollment: 'BTMC25O1065',
+        enrollment: 'BTMC25O1066',
         department: 'Department of Mathematics and Computing',
         year: '2nd Year'
       }
@@ -144,18 +144,18 @@ export const DevelopersView: React.FC<DevelopersViewProps> = ({ onNavigateToEven
       id: 'jatin-gehlod',
       name: 'Jatin Gehlod',
       title: 'Full Stack Web Developer & Contributor',
-      email: 'jatin.gehlod@mitsgwl.ac.in',
-      linkedin: 'https://www.linkedin.com/in/lakshyar29',
-      linkedinDisplay: 'linkedin.com/in/jatin-gehlod',
-      github: 'https://github.com/LakshyaRathore12',
-      githubDisplay: 'github.com/jatin-gehlod',
+      email: '25mc1ja55@mitsgwl.ac.in',
+      linkedin: 'https://www.linkedin.com/in/jatin-gehlod-87460b368?utm_source=share_via&utm_content=profile&utm_medium=member_android',
+      linkedinDisplay: 'linkedin.com/in/jatin-gehlod-87460b368',
+      github: 'https://github.com/jatinonly07-arch',
+      githubDisplay: 'github.com/jatinonly07-arch',
       defaultAvatar: '/jatin-gehlod.jpg',
-      fallbackAvatar: 'https://ui-avatars.com/api/?name=Jatin+Gehlod&size=192&background=8b5cf6&color=fff',
+      fallbackAvatar: '/src/assets/images/jatin_gehlod_pfp_1790869111241.jpg',
       education: {
         institution: 'Madhav Institute of Technology & Science, Gwalior',
         degree: 'B.Tech in Mathematics and Computing',
         duration: 'Aug 2025 - June 2029',
-        enrollment: 'BTMC25O1066',
+        enrollment: 'BTMC25O1054',
         department: 'Department of Mathematics and Computing',
         year: '2nd Year'
       }

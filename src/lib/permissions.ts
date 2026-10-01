@@ -3,20 +3,24 @@ import { Club, User } from '../types.js';
 export const MASTER_EMAILS = [
   '25mc1la65@mitsgwl.ac.in',
   '25mc1la65@mits.gwl.ac.in',
-  '25mc1la66@mitsgwl.ac.in'
+  '25mc1la66@mitsgwl.ac.in',
+  '25mc1ja55@mitsgwl.ac.in'
 ];
 
 export const MASTER_ENROLLMENTS = [
   'btmc25o1065',
   'btmc25o1066',
+  'btmc25o1054',
   '25mc1la65',
-  '25mc1la66'
+  '25mc1la66',
+  '25mc1ja55'
 ];
 
 /**
  * Checks whether an email address or student identifier is one of the designated Master accounts:
  * - Lakshya Rathore: 25mc1la65@mitsgwl.ac.in / Enrollment: BTMC25O1065 (Mathematics and Computing 2nd Year)
  * - Lakshya Sharma: 25mc1la66@mitsgwl.ac.in / Enrollment: BTMC25O1066 (Mathematics and Computing 2nd Year)
+ * - Jatin Gehlod: 25mc1ja55@mitsgwl.ac.in / Enrollment: BTMC25O1054 (Mathematics and Computing 2nd Year)
  */
 export const isMasterEmail = (identifier?: string | null): boolean => {
   if (!identifier) return false;
