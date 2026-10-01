@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, 
   Mail, 
@@ -6,7 +6,6 @@ import {
   Code2, 
   Copy, 
   Check, 
-  Camera, 
   Sparkles
 } from 'lucide-react';
 
@@ -46,9 +45,6 @@ export const DevelopersView: React.FC<DevelopersViewProps> = ({ onNavigateToEven
     };
   });
 
-  const [activeUploadDev, setActiveUploadDev] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   useEffect(() => {
     const savedRathore = localStorage.getItem('avatar_lakshya-rathore');
     const savedSharma = localStorage.getItem('avatar_lakshya-sharma');
@@ -66,37 +62,6 @@ export const DevelopersView: React.FC<DevelopersViewProps> = ({ onNavigateToEven
     navigator.clipboard.writeText(email);
     setCopiedEmail(email);
     setTimeout(() => setCopiedEmail(null), 2000);
-  };
-
-  const triggerUpload = (devId: string) => {
-    setActiveUploadDev(devId);
-    fileInputRef.current?.click();
-  };
-
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !activeUploadDev) return;
-
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      const base64 = ev.target?.result as string;
-      if (base64) {
-        setAvatarMap(prev => ({ ...prev, [activeUploadDev]: base64 }));
-        localStorage.setItem(`avatar_${activeUploadDev}`, base64);
-
-        try {
-          await fetch('/api/developer/avatar', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ base64Data: base64, developerKey: activeUploadDev })
-          });
-        } catch (err) {
-          console.error('Failed to sync avatar with server:', err);
-        }
-      }
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
   };
 
   const developers: DeveloperData[] = [
@@ -199,16 +164,6 @@ export const DevelopersView: React.FC<DevelopersViewProps> = ({ onNavigateToEven
           </p>
         </div>
 
-        {/* Hidden File Input for Custom Photo Upload */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handlePhotoUpload}
-          className="hidden"
-          id="dev-profile-file-input"
-        />
-
         {/* Developers Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 mb-12">
           {developers.map((dev, index) => {
@@ -239,17 +194,6 @@ export const DevelopersView: React.FC<DevelopersViewProps> = ({ onNavigateToEven
                         }}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
-
-                      {/* Photo Change Hover Button */}
-                      <button
-                        type="button"
-                        onClick={() => triggerUpload(dev.id)}
-                        className="absolute inset-0 bg-slate-900/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[11px] font-semibold cursor-pointer"
-                        title="Upload / Change Photo"
-                      >
-                        <Camera className="w-5 h-5 mb-1" />
-                        <span>Change</span>
-                      </button>
                     </div>
                   </div>
                 </div>

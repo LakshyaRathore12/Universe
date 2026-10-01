@@ -840,6 +840,10 @@ app.post('/api/developer/avatar', express.json({ limit: '15mb' }), (req: Request
       fs.writeFileSync(path.join(publicDir, 'lakshya-profile.jpg'), buffer);
       fs.writeFileSync(path.join(publicDir, 'lakshya.jpg'), buffer);
     }
+    if (key === 'jatin-gehlod' || key === 'jatin-profile') {
+      fs.writeFileSync(path.join(publicDir, 'jatin-gehlod.jpg'), buffer);
+      fs.writeFileSync(path.join(publicDir, 'jatin-profile.jpg'), buffer);
+    }
     res.json({ success: true, url: `/${filename}` });
   } catch (err: any) {
     console.error('Error saving developer avatar:', err);
